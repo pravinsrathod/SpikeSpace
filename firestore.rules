@@ -1,0 +1,126 @@
+rules_version = '2';
+
+// ============================================================
+// ProManager — Firestore Security Rules
+// ============================================================
+// Data model:
+//   /tournaments/{tournamentId}
+//     managerId:      uid of the creator (immutable after creation)
+//     status:         'REGISTRATION' | 'ACTIVE' | 'COMPLETED'
+//
+//     /teams/{teamId}
+//       captainId:    uid of the user who registered the team
+//       status:       'PENDING' | 'APPROVED'
+//
+//     /matches/{matchId}
+//       (created/managed exclusively by the tournament manager)
+// ============================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ----------------------------------------------------------
+    // Helper functions
+    // ----------------------------------------------------------
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isUser(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
+    }
+
+    // Fetches the parent tournament document to check managerId.
+    // Used inside subcollection rules.
+    function getTournament(tournamentId) {
+      return get(/databases/$(database)/documents/tournaments/$(tournamentId));
+    }
+
+    function isTournamentManager(tournamentId) {
+      return isAuthenticated()
+        && getTournament(tournamentId).data.managerId == request.auth.uid;
+    }
+
+    // Validates that only allowed fields changed (no extra keys snuck in).
+    function onlyChanged(fields) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields);
+    }
+
+    // ----------------------------------------------------------
+    // /tournaments/{tournamentId}
+    // ----------------------------------------------------------
+    match /tournaments/{tournamentId} {
+
+      // Public: anyone can browse the tournament list and view details.
+      allow read: if true;
+
+      // Authenticated users can create a tournament.
+      // Constraints: they must be the manager, status must start as REGISTRATION.
+      allow create: if isAuthenticated()
+        && request.resource.data.managerId == request.auth.uid
+        && request.resource.data.status == 'REGISTRATION';
+
+      // Only the manager can update the tournament.
+      // managerId is immutable after creation — prevents ownership hijacking.
+      allow update: if isUser(resource.data.managerId)
+        && request.resource.data.managerId == resource.data.managerId;
+
+      // Only the manager can delete the tournament.
+      allow delete: if isUser(resource.data.managerId);
+
+      // ----------------------------------------------------------
+      // /tournaments/{tournamentId}/teams/{teamId}
+      // ----------------------------------------------------------
+      match /teams/{teamId} {
+
+        // Public: anyone can see the team list.
+        allow read: if true;
+
+        // Any authenticated user can register a team.
+        // Rules:
+        //   - captainId must be their own uid (no impersonation)
+        //   - Regular users can only register as PENDING
+        //   - Managers can directly register as APPROVED (manual add flow)
+        allow create: if isAuthenticated()
+          && request.resource.data.captainId == request.auth.uid
+          && (
+            request.resource.data.status == 'PENDING'
+            || (request.resource.data.status == 'APPROVED' && isTournamentManager(tournamentId))
+          );
+
+        // Two separate update paths:
+        //   1. Captain: can edit name, players, colorHex — cannot touch status or captainId
+        //   2. Manager: can edit anything (approve/reject, correct data, etc.)
+        allow update: if
+          (isUser(resource.data.captainId)
+            && onlyChanged(['name', 'players', 'colorHex'])
+          )
+          || isTournamentManager(tournamentId);
+
+        // Captain can remove their own team; manager can remove any team.
+        allow delete: if isUser(resource.data.captainId)
+          || isTournamentManager(tournamentId);
+      }
+
+      // ----------------------------------------------------------
+      // /tournaments/{tournamentId}/matches/{matchId}
+      // ----------------------------------------------------------
+      match /matches/{matchId} {
+
+        // Public: anyone can view live scores and fixtures.
+        allow read: if true;
+
+        // Only the tournament manager can create matches (on tournament start).
+        allow create: if isTournamentManager(tournamentId);
+
+        // Only the tournament manager can update match scores/status.
+        // updatedAt is always expected to change, so no field restriction here.
+        allow update: if isTournamentManager(tournamentId);
+
+        // Only the tournament manager can delete matches (reset draws).
+        allow delete: if isTournamentManager(tournamentId);
+      }
+    }
+  }
+}

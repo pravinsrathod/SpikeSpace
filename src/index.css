@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-background text-foreground antialiased min-h-screen selection:bg-primary/30 selection:text-primary-foreground;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none focus-visible:ring-offset-slate-950;
+  }
+  .btn-primary {
+    @apply bg-primary text-primary-foreground hover:bg-primary/90;
+  }
+  .btn-secondary {
+    @apply bg-secondary text-secondary-foreground hover:bg-secondary/80;
+  }
+  .btn-outline {
+    @apply border border-muted-foreground/20 hover:bg-muted hover:text-foreground;
+  }
+  .btn-ghost {
+    @apply hover:bg-muted hover:text-foreground;
+  }
+  
+  .card {
+    @apply rounded-xl border border-white/10 bg-slate-900/50 backdrop-blur-md shadow-sm;
+  }
+  
+  .input {
+    @apply flex h-10 w-full rounded-md border border-white/10 bg-slate-900/50 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+}
+
+/* Custom Scrollbar for sleek dark look */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: theme('colors.slate.950'); 
+}
+::-webkit-scrollbar-thumb {
+  background: theme('colors.slate.800'); 
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: theme('colors.slate.700'); 
+}

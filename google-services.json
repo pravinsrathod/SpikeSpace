@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "572083156211",
+    "project_id": "saloon-9e12f",
+    "storage_bucket": "saloon-9e12f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:572083156211:android:b0acb005a79958eff77386",
+        "android_client_info": {
+          "package_name": "com.prowin.score"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC-oa_mmYJ6lGCuB2e0HDopUZPOi4wfhh4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

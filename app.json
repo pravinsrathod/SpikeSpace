@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "71934ffb-f6f6-4c0d-b0b4-f57c20eaa567"
+      }
+    },
+    "android": {
+      "package": "com.prowin.promanager"
+    },
+    "ios": {
+      "bundleIdentifier": "com.prowin.promanager",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    }
+  }
+}

@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTournament, useMatches, useTeams } from '../context/TournamentContext';
 import { updateMatch, type Match } from '../firebase/db';
-import { ArrowLeft, Timer, Minus, Flag, Settings2, Play, History, Trophy } from 'lucide-react';
+import { ArrowLeft, Timer, Minus, Flag, Settings2, Play, History, Trophy, Volume2, VolumeX, ArrowLeftRight } from 'lucide-react';
 import { clsx } from 'clsx';
 import { checkDynamicProgression } from '../utils/progression';
 import { useNavigate } from 'react-router-dom';
+import { CourtVisualizer } from '../components/CourtVisualizer';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -33,7 +34,7 @@ function setScoreUpdates(setNum: number, a: number, b: number): Partial<Match> {
 }
 
 // ─── Referee Rules Config Panel ──────────────────────────
-function RulesConfigPanel({ match, onStart }: { match: Match; onStart: () => void }) {
+function RulesConfigPanel({ match, onStart, sport = 'volleyball' }: { match: Match; onStart: () => void; sport?: 'volleyball' | 'badminton' }) {
   const [totalSets, setTotalSets] = useState(match.totalSets || 1);
   const [pointsPerSet, setPointsPerSet] = useState(match.pointsPerSet || 21);
   const [pointsLastSet, setPointsLastSet] = useState(match.pointsLastSet || 21);
@@ -47,7 +48,7 @@ function RulesConfigPanel({ match, onStart }: { match: Match; onStart: () => voi
       pointsLastSet,
       status: 'LIVE',
       currentServe: 'A',
-    });
+    }, sport);
     onStart();
     setSaving(false);
   };
@@ -170,7 +171,7 @@ function RulesConfigPanel({ match, onStart }: { match: Match; onStart: () => voi
 }
 
 
-export default function MatchDashboardPage({ matchId }: { matchId: string }) {
+export default function MatchDashboardPage({ matchId, sport = 'volleyball' }: { matchId: string; sport?: 'volleyball' | 'badminton' }) {
   const navigate = useNavigate();
   const { tournament } = useTournament();
   const matches = useMatches();
@@ -182,8 +183,23 @@ export default function MatchDashboardPage({ matchId }: { matchId: string }) {
   const [justCompleted, setJustCompleted] = useState(false);
   const [rulesConfirmed, setRulesConfirmed] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [announceScore, setAnnounceScore] = useState(false);
+  const [swappedSides, setSwappedSides] = useState(false);
 
   const match = matches.find(m => m.id === matchId);
+
+  useEffect(() => {
+    if (match && tournament) {
+      document.title = `${match.teamAName} vs ${match.teamBName} - ${tournament.name} | ProManager`;
+      let metaDesc = document.querySelector('meta[name="description"]');
+      if (!metaDesc) {
+        metaDesc = document.createElement('meta');
+        metaDesc.setAttribute('name', 'description');
+        document.head.appendChild(metaDesc);
+      }
+      metaDesc.setAttribute('content', `Live match updates: ${match.teamAName} vs ${match.teamBName} in ${tournament.name}.`);
+    }
+  }, [match?.teamAName, match?.teamBName, tournament?.name]);
 
   const isCompletingRef = useRef(false);
 
@@ -204,13 +220,13 @@ export default function MatchDashboardPage({ matchId }: { matchId: string }) {
           currentServe: null
         };
         
-        await updateMatch(tournament.id, match.id, updates);
+        await updateMatch(tournament.id, match.id, updates, sport);
 
         // Create an optimistic matches array for progression check
         const updatedMatches = matches.map(m => 
           m.id === match.id ? { ...m, ...updates } as Match : m
         );
-        await checkDynamicProgression(tournament, updatedMatches, teams);
+        await checkDynamicProgression(tournament, updatedMatches, teams, sport);
 
         // 1. Resolve explicit TBD placeholders (e.g. for Page Playoffs)
         const loserId = winnerId === match.teamAId ? match.teamBId : match.teamAId;
@@ -227,7 +243,7 @@ export default function MatchDashboardPage({ matchId }: { matchId: string }) {
           if (m.teamBId === `TBD_L_${match.id}`) { nextUpdates.teamBId = loserId; nextUpdates.teamBName = loserName; handledByPlaceholder = true; }
           
           if (Object.keys(nextUpdates).length > 0) {
-            await updateMatch(tournament.id, m.id, nextUpdates);
+            await updateMatch(tournament.id, m.id, nextUpdates, sport);
           }
         }
 
@@ -244,7 +260,7 @@ export default function MatchDashboardPage({ matchId }: { matchId: string }) {
               nextUpdates.teamBId = winnerId;
               nextUpdates.teamBName = winnerName;
             }
-            await updateMatch(tournament.id, nextMatch.id, nextUpdates);
+            await updateMatch(tournament.id, nextMatch.id, nextUpdates, sport);
           }
         }
         setJustCompleted(true);
@@ -266,6 +282,8 @@ export default function MatchDashboardPage({ matchId }: { matchId: string }) {
 
   if (match.status === 'PENDING' && !rulesConfirmed) {
     const isManager = user?.uid === tournament.managerId && !!user?.uid;
+    const isTeamPending = match.teamAId?.startsWith('TBD_') || match.teamBId?.startsWith('TBD_');
+
     return (
       <div className="flex flex-col h-[100dvh] bg-slate-950 overflow-hidden">
         <div className="p-4 border-b border-white/10 shrink-0">
@@ -274,8 +292,15 @@ export default function MatchDashboardPage({ matchId }: { matchId: string }) {
           </button>
         </div>
         <div className="flex-1 overflow-auto">
-          {isManager ? (
-            <RulesConfigPanel match={match} onStart={() => setRulesConfirmed(true)} />
+          {isTeamPending ? (
+            <div className="flex-1 flex items-center justify-center p-4">
+              <div className="card p-12 text-center text-slate-400 w-full max-w-sm">
+                <h2 className="text-xl font-bold text-white mb-2">Teams Undecided</h2>
+                <p>Waiting for preceding matches to complete.</p>
+              </div>
+            </div>
+          ) : isManager ? (
+            <RulesConfigPanel match={match} onStart={() => setRulesConfirmed(true)} sport={sport} />
           ) : (
             <div className="flex-1 flex items-center justify-center p-4">
               <div className="card p-12 text-center text-slate-400 w-full max-w-sm">
@@ -337,7 +362,34 @@ export default function MatchDashboardPage({ matchId }: { matchId: string }) {
       updates.currentServe = setWinner === 'A' ? 'B' : 'A';
     }
 
-    await updateMatch(tournament.id, match.id, updates);
+    if (announceScore && delta > 0) {
+      let announcement = "";
+      const maxScore = Math.max(newA, newB);
+      const minScore = Math.min(newA, newB);
+      const isALeading = newA > newB;
+      const leaderName = isALeading ? match.teamAName : match.teamBName;
+      const baseScore = team === 'A' ? `${match.teamAName} ${newA}, ${match.teamBName} ${newB}` : `${match.teamBName} ${newB}, ${match.teamAName} ${newA}`;
+      const isMatchPoint = isALeading ? match.setsWonA === setsToWin - 1 : match.setsWonB === setsToWin - 1;
+
+      if (maxScore >= targetScore && maxScore - minScore >= 2) {
+        announcement = isMatchPoint ? `Game, Set, Match, ${leaderName}` : `Set won by ${leaderName}`;
+      } else if (newA === newB && newA >= targetScore - 1) {
+        announcement = "Deuce";
+      } else if (maxScore >= targetScore && maxScore - minScore === 1) {
+        announcement = `Advantage ${leaderName}`;
+      } else if (maxScore >= targetScore - 1) {
+        announcement = `${baseScore}. ${isMatchPoint ? 'Match' : 'Set'} Point.`;
+      } else {
+        announcement = baseScore;
+      }
+
+      if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(announcement);
+        window.speechSynthesis.speak(utterance);
+      }
+    }
+
+    await updateMatch(tournament.id, match.id, updates, sport);
   };
 
   const handleCompleteMatch = async () => {
@@ -350,13 +402,13 @@ export default function MatchDashboardPage({ matchId }: { matchId: string }) {
       currentServe: null
     };
 
-    await updateMatch(tournament.id, match.id, updates);
+    await updateMatch(tournament.id, match.id, updates, sport);
 
     // Create an optimistic matches array for progression check
     const updatedMatches = matches.map(m => 
       m.id === match.id ? { ...m, ...updates } as Match : m
     );
-    await checkDynamicProgression(tournament, updatedMatches, teams);
+    await checkDynamicProgression(tournament, updatedMatches, teams, sport);
 
     // 1. Resolve explicit TBD placeholders (e.g. for Page Playoffs)
     const loserId = winnerId === match.teamAId ? match.teamBId : match.teamAId;
@@ -373,7 +425,7 @@ export default function MatchDashboardPage({ matchId }: { matchId: string }) {
       if (m.teamBId === `TBD_L_${match.id}`) { nextUpdates.teamBId = loserId; nextUpdates.teamBName = loserName; handledByPlaceholder = true; }
       
       if (Object.keys(nextUpdates).length > 0) {
-        await updateMatch(tournament.id, m.id, nextUpdates);
+        await updateMatch(tournament.id, m.id, nextUpdates, sport);
       }
     }
 
@@ -390,7 +442,7 @@ export default function MatchDashboardPage({ matchId }: { matchId: string }) {
           nextUpdates.teamBId = winnerId;
           nextUpdates.teamBName = winnerName;
         }
-        await updateMatch(tournament.id, nextMatch.id, nextUpdates);
+        await updateMatch(tournament.id, nextMatch.id, nextUpdates, sport);
       }
     }
     setJustCompleted(true);
@@ -398,10 +450,10 @@ export default function MatchDashboardPage({ matchId }: { matchId: string }) {
 
   const handleTimeout = async (team: 'A' | 'B') => {
     if (team === 'A' && match.timeoutsRemainingA > 0) {
-      await updateMatch(tournament.id, match.id, { timeoutsRemainingA: match.timeoutsRemainingA - 1 });
+      await updateMatch(tournament.id, match.id, { timeoutsRemainingA: match.timeoutsRemainingA - 1 }, sport);
     }
     if (team === 'B' && match.timeoutsRemainingB > 0) {
-      await updateMatch(tournament.id, match.id, { timeoutsRemainingB: match.timeoutsRemainingB - 1 });
+      await updateMatch(tournament.id, match.id, { timeoutsRemainingB: match.timeoutsRemainingB - 1 }, sport);
     }
   };
 
@@ -420,17 +472,31 @@ export default function MatchDashboardPage({ matchId }: { matchId: string }) {
             BO{totalSets} · {match.pointsPerSet}pts
           </div>
         </div>
-        <button 
-          onClick={() => setShowHistory(true)}
-          className="p-2 -mr-2 rounded-full hover:bg-white/10 active:bg-white/20 transition-colors text-primary"
-        >
-          <History className="w-6 h-6" />
-        </button>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={() => setSwappedSides(!swappedSides)}
+            className="p-2 rounded-full hover:bg-white/10 active:bg-white/20 transition-colors text-slate-300"
+          >
+            <ArrowLeftRight className="w-6 h-6" />
+          </button>
+          <button 
+            onClick={() => setAnnounceScore(!announceScore)}
+            className="p-2 rounded-full hover:bg-white/10 active:bg-white/20 transition-colors"
+          >
+            {announceScore ? <Volume2 className="w-6 h-6 text-primary" /> : <VolumeX className="w-6 h-6 text-slate-300" />}
+          </button>
+          <button 
+            onClick={() => setShowHistory(true)}
+            className="p-2 -mr-2 rounded-full hover:bg-white/10 active:bg-white/20 transition-colors text-primary"
+          >
+            <History className="w-6 h-6" />
+          </button>
+        </div>
       </div>
 
       {/* Main Split Scoreboard */}
-      <div className="flex-1 flex flex-row p-2 gap-2 overflow-hidden">
-        
+      <div className={clsx("flex-1 overflow-auto flex gap-4 p-4", swappedSides ? "flex-col-reverse sm:flex-row-reverse" : "flex-col sm:flex-row")}>
+        <h1 className="sr-only">Match: {match.teamAName} vs {match.teamBName}</h1>
         {/* Team A */}
         <div className="flex-1 card flex flex-col relative overflow-hidden" style={{ borderTop: `4px solid ${tAColor}` }}>
           {match.currentServe === 'A' && <div className="absolute inset-0 ring-2 ring-emerald-500 rounded-lg pointer-events-none" />}
@@ -447,7 +513,7 @@ export default function MatchDashboardPage({ matchId }: { matchId: string }) {
             {match.status === 'COMPLETED' && match.winnerId === match.teamAId && (
               <div className="text-6xl mb-4 animate-bounce z-10">🏆</div>
             )}
-            <div className="text-[80px] sm:text-[180px] font-black leading-none tracking-tighter tabular-nums mb-4 drop-shadow-xl z-10 select-none">
+            <div aria-live="polite" aria-atomic="true" className="text-[80px] sm:text-[180px] font-black leading-none tracking-tighter tabular-nums mb-4 drop-shadow-xl z-10 select-none">
               {activeSet <= totalSets ? scoreA : '-'}
             </div>
             
@@ -508,7 +574,7 @@ export default function MatchDashboardPage({ matchId }: { matchId: string }) {
             {match.status === 'COMPLETED' && match.winnerId === match.teamBId && (
               <div className="text-6xl mb-4 animate-bounce z-10">🏆</div>
             )}
-            <div className="text-[80px] sm:text-[180px] font-black leading-none tracking-tighter tabular-nums mb-4 drop-shadow-xl z-10 select-none">
+            <div aria-live="polite" aria-atomic="true" className="text-[80px] sm:text-[180px] font-black leading-none tracking-tighter tabular-nums mb-4 drop-shadow-xl z-10 select-none">
               {activeSet <= totalSets ? scoreB : '-'}
             </div>
             {/* Gesture Overlay for Score */}
@@ -552,6 +618,14 @@ export default function MatchDashboardPage({ matchId }: { matchId: string }) {
           </div>
         </div>
 
+      </div>
+
+      <div className="px-4 pb-8">
+        <CourtVisualizer 
+          teamAColor={swappedSides ? tBColor : tAColor} 
+          teamBColor={swappedSides ? tAColor : tBColor} 
+          serve={match.currentServe ? (swappedSides ? (match.currentServe === 'A' ? 'B' : 'A') : match.currentServe) : null} 
+        />
       </div>
 
       {/* History Bottom Sheet */}

@@ -84,9 +84,11 @@ export interface Match {
 export const subscribeToTournaments = (
   callback: (tournaments: Tournament[]) => void,
   onError?: (error: Error) => void,
-  limitCount = 50
+  limitCount = 50,
+  sport: 'volleyball' | 'badminton' = 'volleyball'
 ) => {
-  const q = query(collection(db, 'tournaments'), orderBy('createdAt', 'desc'), limit(limitCount));
+  const coll = sport === 'badminton' ? 'badminton_tournaments' : 'tournaments';
+  const q = query(collection(db, coll), orderBy('createdAt', 'desc'), limit(limitCount));
   return onSnapshot(q, 
     (snapshot) => {
       const tournaments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Tournament));
@@ -99,9 +101,11 @@ export const subscribeToTournaments = (
 export const subscribeToTournament = (
   tournamentId: string,
   callback: (tournament: Tournament | null) => void,
-  onError?: (error: Error) => void
+  onError?: (error: Error) => void,
+  sport: 'volleyball' | 'badminton' = 'volleyball'
 ) => {
-  return onSnapshot(doc(db, 'tournaments', tournamentId), 
+  const coll = sport === 'badminton' ? 'badminton_tournaments' : 'tournaments';
+  return onSnapshot(doc(db, coll, tournamentId), 
     (docSnap) => {
       if (docSnap.exists()) {
         callback({ id: docSnap.id, ...docSnap.data() } as Tournament);
@@ -113,8 +117,9 @@ export const subscribeToTournament = (
   );
 };
 
-export const createTournament = async (tournament: Omit<Tournament, 'id' | 'createdAt'>) => {
-  const newRef = doc(collection(db, 'tournaments'));
+export const createTournament = async (tournament: Omit<Tournament, 'id' | 'createdAt'>, sport: 'volleyball' | 'badminton' = 'volleyball') => {
+  const coll = sport === 'badminton' ? 'badminton_tournaments' : 'tournaments';
+  const newRef = doc(collection(db, coll));
   await setDoc(newRef, {
     ...tournament,
     createdAt: new Date()
@@ -122,17 +127,20 @@ export const createTournament = async (tournament: Omit<Tournament, 'id' | 'crea
   return newRef.id;
 };
 
-export const updateTournament = async (tournamentId: string, updates: Partial<Tournament>) => {
-  await updateDoc(doc(db, 'tournaments', tournamentId), updates);
+export const updateTournament = async (tournamentId: string, updates: Partial<Tournament>, sport: 'volleyball' | 'badminton' = 'volleyball') => {
+  const coll = sport === 'badminton' ? 'badminton_tournaments' : 'tournaments';
+  await updateDoc(doc(db, coll, tournamentId), updates);
 };
 
 // ---- Teams ----
 export const subscribeToTeams = (
   tournamentId: string,
   callback: (teams: Team[]) => void,
-  onError?: (error: Error) => void
+  onError?: (error: Error) => void,
+  sport: 'volleyball' | 'badminton' = 'volleyball'
 ) => {
-  const q = query(collection(db, 'tournaments', tournamentId, 'teams'), orderBy('createdAt', 'asc'));
+  const coll = sport === 'badminton' ? 'badminton_tournaments' : 'tournaments';
+  const q = query(collection(db, coll, tournamentId, 'teams'), orderBy('createdAt', 'asc'));
   return onSnapshot(q, 
     (snapshot) => {
       const teams = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
@@ -142,8 +150,9 @@ export const subscribeToTeams = (
   );
 };
 
-export const addTeam = async (tournamentId: string, team: Omit<Team, 'id' | 'createdAt'>) => {
-  const teamsRef = collection(db, 'tournaments', tournamentId, 'teams');
+export const addTeam = async (tournamentId: string, team: Omit<Team, 'id' | 'createdAt'>, sport: 'volleyball' | 'badminton' = 'volleyball') => {
+  const coll = sport === 'badminton' ? 'badminton_tournaments' : 'tournaments';
+  const teamsRef = collection(db, coll, tournamentId, 'teams');
   const docRef = await addDoc(teamsRef, {
     ...team,
     createdAt: serverTimestamp()
@@ -151,21 +160,25 @@ export const addTeam = async (tournamentId: string, team: Omit<Team, 'id' | 'cre
   return docRef.id;
 };
 
-export const updateTeam = async (tournamentId: string, teamId: string, updates: Partial<Team>) => {
-  await updateDoc(doc(db, 'tournaments', tournamentId, 'teams', teamId), updates);
+export const updateTeam = async (tournamentId: string, teamId: string, updates: Partial<Team>, sport: 'volleyball' | 'badminton' = 'volleyball') => {
+  const coll = sport === 'badminton' ? 'badminton_tournaments' : 'tournaments';
+  await updateDoc(doc(db, coll, tournamentId, 'teams', teamId), updates);
 };
 
-export const deleteTeam = async (tournamentId: string, teamId: string) => {
-  await deleteDoc(doc(db, 'tournaments', tournamentId, 'teams', teamId));
+export const deleteTeam = async (tournamentId: string, teamId: string, sport: 'volleyball' | 'badminton' = 'volleyball') => {
+  const coll = sport === 'badminton' ? 'badminton_tournaments' : 'tournaments';
+  await deleteDoc(doc(db, coll, tournamentId, 'teams', teamId));
 };
 
 // ---- Matches ----
 export const subscribeToMatches = (
   tournamentId: string,
   callback: (matches: Match[]) => void,
-  onError?: (error: Error) => void
+  onError?: (error: Error) => void,
+  sport: 'volleyball' | 'badminton' = 'volleyball'
 ) => {
-  const q = query(collection(db, 'tournaments', tournamentId, 'matches'), orderBy('round', 'asc'), orderBy('position', 'asc'));
+  const coll = sport === 'badminton' ? 'badminton_tournaments' : 'tournaments';
+  const q = query(collection(db, coll, tournamentId, 'matches'), orderBy('round', 'asc'), orderBy('position', 'asc'));
   return onSnapshot(q, 
     (snapshot) => {
       const matches = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Match));
@@ -175,26 +188,29 @@ export const subscribeToMatches = (
   );
 };
 
-export const updateMatch = async (tournamentId: string, matchId: string, data: Partial<Match>) => {
-  const matchRef = doc(db, 'tournaments', tournamentId, 'matches', matchId);
+export const updateMatch = async (tournamentId: string, matchId: string, data: Partial<Match>, sport: 'volleyball' | 'badminton' = 'volleyball') => {
+  const coll = sport === 'badminton' ? 'badminton_tournaments' : 'tournaments';
+  const matchRef = doc(db, coll, tournamentId, 'matches', matchId);
   await updateDoc(matchRef, { ...data, updatedAt: new Date() });
 };
 
-export const setMatchesBulk = async (tournamentId: string, matches: Match[]) => {
+export const setMatchesBulk = async (tournamentId: string, matches: Match[], sport: 'volleyball' | 'badminton' = 'volleyball') => {
+  const coll = sport === 'badminton' ? 'badminton_tournaments' : 'tournaments';
   const BATCH_SIZE = 500;
   for (let i = 0; i < matches.length; i += BATCH_SIZE) {
     const batch = writeBatch(db);
     const chunk = matches.slice(i, i + BATCH_SIZE);
     for (const match of chunk) {
-      const ref = doc(db, 'tournaments', tournamentId, 'matches', match.id);
+      const ref = doc(db, coll, tournamentId, 'matches', match.id);
       batch.set(ref, match);
     }
     await batch.commit();
   }
 };
 
-export const clearMatches = async (tournamentId: string) => {
-  const matchesSnap = await getDocs(collection(db, 'tournaments', tournamentId, 'matches'));
+export const clearMatches = async (tournamentId: string, sport: 'volleyball' | 'badminton' = 'volleyball') => {
+  const coll = sport === 'badminton' ? 'badminton_tournaments' : 'tournaments';
+  const matchesSnap = await getDocs(collection(db, coll, tournamentId, 'matches'));
   const BATCH_SIZE = 500;
   for (let i = 0; i < matchesSnap.docs.length; i += BATCH_SIZE) {
     const batch = writeBatch(db);
@@ -204,14 +220,15 @@ export const clearMatches = async (tournamentId: string) => {
   }
 };
 
-export const deleteTournament = async (tournamentId: string) => {
-  const teamsRef = collection(db, 'tournaments', tournamentId, 'teams');
+export const deleteTournament = async (tournamentId: string, sport: 'volleyball' | 'badminton' = 'volleyball') => {
+  const coll = sport === 'badminton' ? 'badminton_tournaments' : 'tournaments';
+  const teamsRef = collection(db, coll, tournamentId, 'teams');
   const teamsSnap = await getDocs(teamsRef);
   
-  const matchesRef = collection(db, 'tournaments', tournamentId, 'matches');
+  const matchesRef = collection(db, coll, tournamentId, 'matches');
   const matchesSnap = await getDocs(matchesRef);
 
-  const tRef = doc(db, 'tournaments', tournamentId);
+  const tRef = doc(db, coll, tournamentId);
 
   // Gather all references to delete
   const allRefs = [

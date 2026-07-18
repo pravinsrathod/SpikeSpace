@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTournament, useMatches, useTeams } from '../context/TournamentContext';
 
@@ -10,8 +10,9 @@ import { useAuth } from '../context/AuthContext';
 import { updateTournament, clearMatches, setMatchesBulk } from '../firebase/db';
 import { generateDynamicTournament } from '../utils/tournamentGenerator';
 import { determineTournamentWinner } from '../utils/progression';
+import { motion } from 'framer-motion';
 
-export default function TournamentBoardPage() {
+export default function TournamentBoardPage({ sport = 'volleyball' }: { sport?: 'volleyball' | 'badminton' }) {
   const { tournament } = useTournament();
   const matches = useMatches();
   const teams = useTeams();
@@ -22,6 +23,19 @@ export default function TournamentBoardPage() {
 
   if (!tournament) return null;
 
+  useEffect(() => {
+    if (tournament) {
+      document.title = `${tournament.name} | ProManager`;
+      let metaDesc = document.querySelector('meta[name="description"]');
+      if (!metaDesc) {
+        metaDesc = document.createElement('meta');
+        metaDesc.setAttribute('name', 'description');
+        document.head.appendChild(metaDesc);
+      }
+      metaDesc.setAttribute('content', `Live tournament board for ${tournament.name}. View fixtures, standings, and brackets.`);
+    }
+  }, [tournament]);
+
   const activePhaseId = activePhaseIdState || tournament.phases[0]?.id;
   const activePhase = tournament.phases.find(p => p.id === activePhaseId);
 
@@ -31,21 +45,21 @@ export default function TournamentBoardPage() {
   const handleEndTournament = async () => {
     if (!confirm('Are you sure you want to end this tournament? This will move it to COMPLETED status.')) return;
     const winnerName = determineTournamentWinner(tournament, matches, teams);
-    await updateTournament(tournament.id, { status: 'COMPLETED', winnerName });
+    await updateTournament(tournament.id, { status: 'COMPLETED', winnerName }, sport);
   };
 
   const handleResetDraws = async () => {
     if (!confirm('Are you sure you want to reset all matches? This will return the tournament to Registration mode.')) return;
-    await clearMatches(tournament.id);
-    await updateTournament(tournament.id, { status: 'REGISTRATION' });
+    await clearMatches(tournament.id, sport);
+    await updateTournament(tournament.id, { status: 'REGISTRATION' }, sport);
   };
 
   const handleShuffleDraws = async () => {
     if (!confirm('Are you sure you want to shuffle the draws? This will regenerate all matches with random team placements.')) return;
     const approvedTeams = teams.filter(t => t.status === 'APPROVED');
     const newMatches = generateDynamicTournament(tournament.id, approvedTeams, tournament.phases);
-    await clearMatches(tournament.id);
-    await setMatchesBulk(tournament.id, newMatches);
+    await clearMatches(tournament.id, sport);
+    await setMatchesBulk(tournament.id, newMatches, sport);
     setIsManaging(false);
   };
 
@@ -70,12 +84,16 @@ export default function TournamentBoardPage() {
             <p className="text-slate-400 text-sm mb-6">
               When all matches are finished, you can mark the tournament as complete.
             </p>
-            <button 
+            <motion.button 
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.95 }}
+              animate={{ boxShadow: ['0px 0px 0px rgba(16,185,129,0)', '0px 0px 15px rgba(16,185,129,0.5)', '0px 0px 0px rgba(16,185,129,0)'] }}
+              transition={{ boxShadow: { duration: 2, repeat: Infinity } }}
               onClick={handleEndTournament}
-              className="btn btn-outline border-emerald-500/20 text-emerald-400 hover:bg-emerald-500 hover:text-white w-full py-3"
+              className="btn btn-outline border-emerald-500/20 text-emerald-400 hover:bg-emerald-500 hover:text-white w-full py-3 overflow-hidden relative"
             >
-              Complete Tournament
-            </button>
+              <span className="relative z-10 font-bold tracking-wide uppercase">Complete Tournament</span>
+            </motion.button>
           </div>
 
           <div className="pt-8 border-t border-red-500/20">
@@ -109,11 +127,11 @@ export default function TournamentBoardPage() {
     <div className="flex flex-col h-[100dvh] sm:h-full pb-20 sm:pb-0 overflow-hidden sm:overflow-visible">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 shrink-0 pt-4 sm:pt-0">
         <div>
-          <button onClick={() => navigate('/volleyball')} className="btn btn-ghost mb-2 text-sm">
+          <button onClick={() => navigate(`/${sport}`)} className="btn btn-ghost mb-2 text-sm">
             <ArrowLeft className="w-4 h-4 mr-2" /> Back to Hub
           </button>
           <div className="flex items-center gap-3">
-            <h2 className="text-2xl font-bold text-white">{tournament.name}</h2>
+            <h1 className="text-2xl font-bold text-white">{tournament.name}</h1>
             <button 
               onClick={() => {
                 navigator.clipboard.writeText(window.location.href);
@@ -180,13 +198,35 @@ export default function TournamentBoardPage() {
             activePhase?.type === 'ROUND_ROBIN' ? (
               <StandingsTable phaseId={activePhase.id} />
             ) : (
-              <p className="text-slate-400 text-center py-8">Standings are only available for Round Robin phases.</p>
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }} 
+                animate={{ opacity: 1, scale: 1 }} 
+                className="card w-full p-16 flex flex-col items-center justify-center text-center border-dashed border-2 border-white/10 bg-slate-900/20 backdrop-blur-md mt-4"
+              >
+                <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mb-6">
+                  <Trophy className="w-8 h-8 text-slate-400" />
+                </div>
+                <h3 className="text-2xl font-bold text-white mb-3">No Standings</h3>
+                <p className="text-slate-400 max-w-md">Standings are only available for Round Robin phases.</p>
+              </motion.div>
             )
           ) : (
             /* Active Phase */
             activePhase ? (() => {
               const phaseMatches = matches.filter(m => m.phaseId === activePhase.id);
-              if (phaseMatches.length === 0) return <p className="text-slate-400 text-center py-8">No matches generated for this phase yet.</p>;
+              if (phaseMatches.length === 0) return (
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.95 }} 
+                  animate={{ opacity: 1, scale: 1 }} 
+                  className="card w-full p-16 flex flex-col items-center justify-center text-center border-dashed border-2 border-white/10 bg-slate-900/20 backdrop-blur-md mt-4"
+                >
+                  <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mb-6">
+                    <List className="w-8 h-8 text-slate-400" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-white mb-3">No Matches Scheduled</h3>
+                  <p className="text-slate-400 max-w-md">Matches will appear here once the tournament draws are generated by the manager.</p>
+                </motion.div>
+              );
 
               const rounds = Array.from(new Set(phaseMatches.map(m => m.round))).sort((a, b) => a - b);
 
@@ -218,7 +258,17 @@ export default function TournamentBoardPage() {
                 </div>
               );
             })() : (
-              <p className="text-slate-400 text-center py-8">No phases configured for this tournament.</p>
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }} 
+                animate={{ opacity: 1, scale: 1 }} 
+                className="card w-full p-16 flex flex-col items-center justify-center text-center border-dashed border-2 border-white/10 bg-slate-900/20 backdrop-blur-md mt-4"
+              >
+                <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mb-6">
+                  <Settings className="w-8 h-8 text-slate-400" />
+                </div>
+                <h3 className="text-2xl font-bold text-white mb-3">No Phases Configured</h3>
+                <p className="text-slate-400 max-w-md">The manager needs to configure tournament phases first.</p>
+              </motion.div>
             )
           )}
         </div>

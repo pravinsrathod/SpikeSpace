@@ -1,5 +1,5 @@
-
 import type { Match } from '../firebase/db';
+import { motion } from 'framer-motion';
 import { clsx } from 'clsx';
 import { useTeams } from '../context/TournamentContext';
 
@@ -43,10 +43,13 @@ export function MatchCard({ match, onClick }: MatchCardProps) {
   };
 
   return (
-    <div 
+    <motion.div 
       onClick={onClick}
+      whileHover={{ y: -4, scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+      transition={{ type: "spring", stiffness: 400, damping: 25 }}
       className={clsx(
-        "card p-4 cursor-pointer transition-all hover:border-primary/50 group relative min-w-[240px]",
+        "card p-4 cursor-pointer transition-colors group relative min-w-[240px]",
         match.status === 'LIVE' && "border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.15)]"
       )}
     >
@@ -115,6 +118,6 @@ export function MatchCard({ match, onClick }: MatchCardProps) {
         </div>
       )}
 
-    </div>
+    </motion.div>
   );
 };

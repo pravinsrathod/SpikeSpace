@@ -23,7 +23,7 @@ export const useTournament = () => useContext(TournamentContext);
 export const useTeams = () => useContext(TeamsContext);
 export const useMatches = () => useContext(MatchesContext);
 
-export const TournamentProvider = ({ tournamentId, children }: { tournamentId: string, children: React.ReactNode }) => {
+export const TournamentProvider = ({ tournamentId, sport = 'volleyball', children }: { tournamentId: string, sport?: 'volleyball' | 'badminton', children: React.ReactNode }) => {
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
@@ -50,7 +50,8 @@ export const TournamentProvider = ({ tournamentId, children }: { tournamentId: s
         setTournament(data);
         setReady(prev => ({ ...prev, tournament: true }));
       },
-      handleError
+      handleError,
+      sport
     );
 
     const unsubTeams = subscribeToTeams(
@@ -59,7 +60,8 @@ export const TournamentProvider = ({ tournamentId, children }: { tournamentId: s
         setTeams(data);
         setReady(prev => ({ ...prev, teams: true }));
       },
-      handleError
+      handleError,
+      sport
     );
 
     const unsubMatches = subscribeToMatches(
@@ -68,7 +70,8 @@ export const TournamentProvider = ({ tournamentId, children }: { tournamentId: s
         setMatches(data);
         setReady(prev => ({ ...prev, matches: true }));
       },
-      handleError
+      handleError,
+      sport
     );
 
     return () => {
@@ -76,7 +79,7 @@ export const TournamentProvider = ({ tournamentId, children }: { tournamentId: s
       unsubTeams();
       unsubMatches();
     };
-  }, [tournamentId]);
+  }, [tournamentId, sport]);
 
   useEffect(() => {
     if (ready.tournament && ready.teams && ready.matches) {

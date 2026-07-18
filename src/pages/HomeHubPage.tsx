@@ -5,7 +5,7 @@ import { subscribeToTournaments, type Tournament } from '../firebase/db';
 import { useAuth } from '../context/AuthContext';
 import { motion } from 'framer-motion';
 
-export default function HomeHubPage() {
+export default function HomeHubPage({ sport = 'volleyball' }: { sport?: 'volleyball' | 'badminton' }) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
@@ -22,7 +22,7 @@ export default function HomeHubPage() {
     const unsub = subscribeToTournaments((data) => {
       setTournaments(data);
       setLoading(false);
-    });
+    }, undefined, 50, sport);
     return () => unsub();
   }, []);
 
@@ -48,7 +48,7 @@ export default function HomeHubPage() {
             />
           </div>
           <button 
-            onClick={() => navigate('/volleyball/create')}
+            onClick={() => navigate(`/${sport}/create`)}
             className="btn btn-primary w-full sm:w-auto shrink-0"
           >
             <Plus className="w-5 h-5 mr-2" /> Create Tournament
@@ -59,13 +59,32 @@ export default function HomeHubPage() {
       {loading ? (
         <div className="text-slate-400 py-12">Loading tournaments...</div>
       ) : tournaments.length === 0 ? (
-        <div className="card w-full p-12 text-center text-slate-400 border-dashed border-2 border-white/10 bg-transparent">
-          No tournaments available right now. Be the first to create one!
-        </div>
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95 }} 
+          animate={{ opacity: 1, scale: 1 }} 
+          className="card w-full p-16 flex flex-col items-center justify-center text-center border-dashed border-2 border-white/10 bg-slate-900/20 backdrop-blur-md"
+        >
+          <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-6">
+            <Trophy className="w-8 h-8 text-primary" />
+          </div>
+          <h3 className="text-2xl font-bold text-white mb-3">No Tournaments Yet</h3>
+          <p className="text-slate-400 max-w-md mb-8">It's quiet in here. Be the first to create a tournament and invite teams to compete!</p>
+          <button onClick={() => navigate(`/${sport}/create`)} className="btn btn-primary">
+            <Plus className="w-5 h-5 mr-2" /> Create Tournament
+          </button>
+        </motion.div>
       ) : filteredTournaments.length === 0 ? (
-        <div className="card w-full p-12 text-center text-slate-400 border-dashed border-2 border-white/10 bg-transparent">
-          No matching tournaments found.
-        </div>
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95 }} 
+          animate={{ opacity: 1, scale: 1 }} 
+          className="card w-full p-16 flex flex-col items-center justify-center text-center border-dashed border-2 border-white/10 bg-slate-900/20 backdrop-blur-md"
+        >
+          <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mb-6">
+            <Search className="w-8 h-8 text-slate-400" />
+          </div>
+          <h3 className="text-2xl font-bold text-white mb-3">No Results Found</h3>
+          <p className="text-slate-400 max-w-md mb-8">We couldn't find any tournaments matching "{searchQuery}". Try adjusting your search.</p>
+        </motion.div>
       ) : (
         <div className="w-full">
           <motion.div 
@@ -80,17 +99,14 @@ export default function HomeHubPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: Math.min(idx * 0.05, 0.5) }}
                 className="card p-6 flex flex-col justify-between gap-6 group hover:border-primary/50 transition-colors cursor-pointer w-full" 
-                onClick={() => navigate(`/volleyball/tournament/${t.id}`)}
+                onClick={() => navigate(`/${sport}/tournament/${t.id}`)}
               >
                 <div>
                   <div className="flex items-start justify-between mb-4">
                     <h3 className="text-xl font-bold text-white group-hover:text-primary transition-colors line-clamp-2 pr-2">{t.name}</h3>
                     {user && (
                       <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/volleyball/create?copyFrom=${t.id}`);
-                        }}
+                        onClick={(e) => { e.stopPropagation(); navigate(`/${sport}/create?copyFrom=${t.id}`); }}
                         className="p-2 -mr-2 -mt-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors flex-shrink-0"
                         title="Copy Tournament"
                       >

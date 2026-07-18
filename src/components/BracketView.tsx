@@ -15,7 +15,7 @@ export const BracketView: React.FC<BracketViewProps> = ({ onMatchSelect }) => {
   if (maxRound === 0) return null;
 
   return (
-    <div className="flex gap-16 overflow-x-auto pb-8 pt-4 px-4 custom-scrollbar">
+    <div className="flex gap-16 overflow-x-auto pb-8 pt-4 px-4 custom-scrollbar snap-x snap-mandatory">
       {Array.from({ length: maxRound }).map((_, rIndex) => {
         const roundNum = rIndex + 1;
         const roundMatches = matches
@@ -23,7 +23,7 @@ export const BracketView: React.FC<BracketViewProps> = ({ onMatchSelect }) => {
           .sort((a, b) => a.position - b.position);
 
         return (
-          <div key={roundNum} className="flex flex-col justify-around min-w-[260px] relative">
+          <div key={roundNum} className="flex flex-col justify-around min-w-[260px] relative snap-center">
             <h3 className="text-center font-bold text-slate-400 mb-8 uppercase tracking-widest text-sm">
               {roundNum === maxRound ? 'Finals' : 
                roundNum === maxRound - 1 ? 'Semi-Finals' : 

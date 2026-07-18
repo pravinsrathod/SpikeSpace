@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 
 const SPORTS = [
   { id: 'volleyball', name: 'Volleyball', emoji: '🏐', active: true, path: '/volleyball' },
+  { id: 'badminton', name: 'Badminton', emoji: '🏸', active: true, path: '/badminton' },
   { id: 'basketball', name: 'Basketball', emoji: '🏀', active: false },
   { id: 'soccer', name: 'Soccer', emoji: '⚽', active: false },
   { id: 'tennis', name: 'Tennis', emoji: '🎾', active: false },
@@ -42,7 +43,7 @@ export default function LandingPage() {
                 : "opacity-60 cursor-not-allowed grayscale-[0.5]"
             )}
           >
-            <div className="text-6xl mb-2 transition-transform duration-300 group-hover:scale-110">
+            <div className="text-6xl mb-2 leading-normal transition-transform duration-300 group-hover:scale-110">
               {sport.emoji}
             </div>
             <h2 className={clsx(

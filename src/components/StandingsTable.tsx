@@ -130,8 +130,8 @@ export const StandingsTable: React.FC<StandingsTableProps> = ({ phaseId }) => {
           <div 
             key={team.id} 
             className={clsx(
-              "bg-slate-900 border rounded-xl p-4",
-              idx === 0 ? "border-amber-500/30" : "border-white/5"
+              "card p-4",
+              idx === 0 ? "border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.15)]" : "border-white/10"
             )}
           >
             {/* Top Row: Rank, Team, Points */}

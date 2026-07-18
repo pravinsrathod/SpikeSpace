@@ -10,7 +10,7 @@ import { useAuth } from '../context/AuthContext';
 import { generateDynamicTournament } from '../utils/tournamentGenerator';
 import { TournamentConfigForm, type TournamentConfigData } from '../components/TournamentConfigForm';
 import { v4 as uuidv4 } from 'uuid';
-export default function TournamentLobbyPage() {
+export default function TournamentLobbyPage({ sport = 'volleyball' }: { sport?: 'volleyball' | 'badminton' }) {
   const navigate = useNavigate();
   const { tournament } = useTournament();
   const teams = useTeams();
@@ -69,7 +69,7 @@ export default function TournamentLobbyPage() {
           colorHex: newTeamColor,
           status: isManager ? 'APPROVED' : 'PENDING',
           captainId: user!.uid
-        });
+        }, sport);
         setNewTeamName('');
         setPlayersInput('');
       } finally {
@@ -111,16 +111,20 @@ export default function TournamentLobbyPage() {
           ];
         }
         
-        const matches = generateDynamicTournament(tournament.id, approvedTeams, finalPhases);
-        await setMatchesBulk(tournament.id, matches);
+        const allMatches = generateDynamicTournament(tournament.id, approvedTeams, finalPhases);
+        await setMatchesBulk(tournament.id, allMatches, sport);
 
         // Save the generated phases to DB so board page knows about them!
-        await updateTournament(tournament.id, { phases: finalPhases, status: 'ACTIVE' });
+        await updateTournament(tournament.id, { 
+          phases: finalPhases, 
+          status: 'ACTIVE',
+          expectedTeams: approvedTeams.length
+        }, sport);
       } else {
-        const matches = generateDynamicTournament(tournament.id, approvedTeams, finalPhases);
-        await setMatchesBulk(tournament.id, matches);
+        const allMatches = generateDynamicTournament(tournament.id, approvedTeams, finalPhases);
+        await setMatchesBulk(tournament.id, allMatches, sport);
 
-        await updateTournament(tournament.id, { status: 'ACTIVE' });
+        await updateTournament(tournament.id, { status: 'ACTIVE' }, sport);
       }
     } catch (err) {
       console.error(err);
@@ -134,8 +138,8 @@ export default function TournamentLobbyPage() {
     if (!confirm('Are you sure you want to permanently delete this tournament? This action cannot be undone.')) return;
     setIsSubmitting(true);
     try {
-      await deleteTournament(tournament.id);
-      navigate('/volleyball');
+      await deleteTournament(tournament.id, sport);
+      navigate(`/${sport}`);
     } catch (err) {
       console.error(err);
       alert('Failed to delete tournament');
@@ -159,7 +163,7 @@ export default function TournamentLobbyPage() {
         name: editName.trim(),
         players: editPlayers.split(',').map(p => p.trim()).filter(Boolean),
         colorHex: editColor,
-      });
+      }, sport);
       setEditingTeam(null);
     } finally {
       setIsSubmitting(false);
@@ -168,12 +172,7 @@ export default function TournamentLobbyPage() {
 
   const handleUpdateRules = async (data: TournamentConfigData) => {
     try {
-      await updateTournament(tournament.id, {
-        name: data.name,
-        expectedTeams: data.expectedTeams,
-        phases: data.phases,
-        isAutoRules: data.isAutoRules
-      });
+      await updateTournament(tournament.id, data, sport);
       setIsEditingRules(false);
     } catch (err) {
       console.error(err);
@@ -221,7 +220,7 @@ export default function TournamentLobbyPage() {
       
       <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pt-4 pb-4 flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0 border-b border-white/5 lg:border-none">
         <div>
-          <button onClick={() => navigate('/volleyball')} className="btn btn-ghost mb-2 text-sm">
+          <button onClick={() => navigate(`/${sport}`)} className="btn btn-ghost mb-2 text-sm">
             <ArrowLeft className="w-4 h-4 mr-2" /> Back to Hub
           </button>
           <div className="flex items-center gap-3">
@@ -448,10 +447,10 @@ export default function TournamentLobbyPage() {
                 <div key={team.id} className="flex flex-col">
                   <TeamCard 
                     team={team} 
-                    onDelete={(id) => deleteTeam(tournament.id, id)}
+                    onDelete={(id) => deleteTeam(tournament.id, id, sport)}
                     onEdit={handleEditClick}
-                    onApprove={(id) => updateTeam(tournament.id, id, { status: 'APPROVED' })}
-                    onReject={(id) => deleteTeam(tournament.id, id)}
+                    onApprove={(id) => updateTeam(tournament.id, id, { status: 'APPROVED' }, sport)}
+                    onReject={(id) => deleteTeam(tournament.id, id, sport)}
                   />
                 </div>
               ))}
@@ -482,7 +481,7 @@ export default function TournamentLobbyPage() {
                 <div key={team.id} className="flex flex-col">
                   <TeamCard 
                     team={team} 
-                    onDelete={isManager || team.captainId === currentUserId ? (id: string) => deleteTeam(tournament.id, id) : undefined}
+                    onDelete={isManager || team.captainId === currentUserId ? (id: string) => deleteTeam(tournament.id, id, sport) : undefined}
                     onEdit={isManager || team.captainId === currentUserId ? handleEditClick : undefined}
                   />
                 </div>

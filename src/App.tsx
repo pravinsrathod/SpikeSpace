@@ -11,18 +11,18 @@ import { Trophy, LogIn, LogOut, User as UserIcon } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 // Wrapper to provide tournament context based on URL param
-function TournamentWrapper() {
+function TournamentWrapper({ sport = 'volleyball' }: { sport?: 'volleyball' | 'badminton' }) {
   const { id } = useParams<{ id: string }>();
   if (!id) return <Navigate to="/" />;
   return (
-    <TournamentProvider tournamentId={id}>
-      <TournamentRouter />
+    <TournamentProvider tournamentId={id} sport={sport}>
+      <TournamentRouter sport={sport} />
     </TournamentProvider>
   );
 }
 
 // Internal router that decides which view to show based on tournament status
-function TournamentRouter() {
+function TournamentRouter({ sport }: { sport: 'volleyball' | 'badminton' }) {
   const { tournament, loading } = useTournament();
 
   if (loading) {
@@ -40,22 +40,22 @@ function TournamentRouter() {
 
   // If registering, show lobby
   if (tournament.status === 'REGISTRATION') {
-    return <TournamentLobbyPage />;
+    return <TournamentLobbyPage sport={sport} />;
   }
 
   // Otherwise show the board (or allow nested routes for matches)
   return (
     <Routes>
-      <Route path="/" element={<TournamentBoardPage />} />
-      <Route path="/match/:matchId" element={<MatchWrapper />} />
+      <Route path="/" element={<TournamentBoardPage sport={sport} />} />
+      <Route path="/match/:matchId" element={<MatchWrapper sport={sport} />} />
     </Routes>
   );
 }
 
-function MatchWrapper() {
+function MatchWrapper({ sport }: { sport: 'volleyball' | 'badminton' }) {
   const { matchId } = useParams<{ matchId: string }>();
   if (!matchId) return <Navigate to=".." />;
-  return <MatchDashboardPage matchId={matchId} />;
+  return <MatchDashboardPage matchId={matchId} sport={sport} />;
 }
 
 function AppContent() {
@@ -105,9 +105,13 @@ function AppContent() {
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/privacy" element={<PrivacyPolicyPage />} />
-            <Route path="/volleyball" element={<HomeHubPage />} />
-            <Route path="/volleyball/create" element={<CreateTournamentPage />} />
-            <Route path="/volleyball/tournament/:id/*" element={<TournamentWrapper />} />
+            <Route path="/volleyball" element={<HomeHubPage sport="volleyball" />} />
+            <Route path="/volleyball/create" element={<CreateTournamentPage sport="volleyball" />} />
+            <Route path="/volleyball/tournament/:id/*" element={<TournamentWrapper sport="volleyball" />} />
+            <Route path="/tournament/:id/*" element={<TournamentWrapper sport="volleyball" />} />
+            <Route path="/badminton" element={<HomeHubPage sport="badminton" />} />
+            <Route path="/badminton/create" element={<CreateTournamentPage sport="badminton" />} />
+            <Route path="/badminton/tournament/:id/*" element={<TournamentWrapper sport="badminton" />} />
           </Routes>
         </main>
       </div>

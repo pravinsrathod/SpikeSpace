@@ -34,11 +34,11 @@ export const calculateStandings = (matches: Match[], teams: Team[]) => {
   });
 };
 
-export const checkDynamicProgression = async (tournament: Tournament, matches: Match[], teams: Team[]) => {
+export const checkDynamicProgression = async (tournament: Tournament, matches: Match[], teams: Team[], sport: 'volleyball' | 'badminton' = 'volleyball') => {
   // Check for overall tournament winner
   const winner = determineTournamentWinner(tournament, matches, teams);
   if (winner && tournament.winnerName !== winner) {
-    await updateTournament(tournament.id, { winnerName: winner });
+    await updateTournament(tournament.id, { winnerName: winner }, sport);
   }
 
   // Iterate through phases
@@ -100,7 +100,7 @@ export const checkDynamicProgression = async (tournament: Tournament, matches: M
           }
           
           if (Object.keys(updates).length > 0) {
-            await updateMatch(tournament.id, m.id, updates);
+            await updateMatch(tournament.id, m.id, updates, sport);
           }
         }
       }

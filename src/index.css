@@ -26,11 +26,11 @@
   }
   
   .card {
-    @apply rounded-xl border border-white/10 bg-slate-900/50 backdrop-blur-md shadow-sm;
+    @apply rounded-xl border border-white/20 bg-slate-900/40 backdrop-blur-xl shadow-lg;
   }
   
   .input {
-    @apply flex h-10 w-full rounded-md border border-white/10 bg-slate-900/50 px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply flex h-10 w-full rounded-md border border-white/20 bg-slate-900/40 backdrop-blur-xl px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:cursor-not-allowed disabled:opacity-50;
   }
 }
 

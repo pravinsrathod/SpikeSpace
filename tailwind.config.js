@@ -10,11 +10,11 @@ export default {
         background: '#020617', // slate-950
         foreground: '#f1f5f9', // slate-100
         primary: {
-          DEFAULT: '#10b981', // emerald-500
+          DEFAULT: '#f97316', // orange-500
           foreground: '#ffffff',
         },
         secondary: {
-          DEFAULT: '#8b5cf6', // violet-500
+          DEFAULT: '#06b6d4', // cyan-500
           foreground: '#ffffff',
         },
         muted: {
@@ -22,7 +22,7 @@ export default {
           foreground: '#94a3b8', // slate-400
         },
         accent: {
-          DEFAULT: '#0ea5e9', // sky-500
+          DEFAULT: '#84cc16', // lime-500
           foreground: '#ffffff',
         },
       },

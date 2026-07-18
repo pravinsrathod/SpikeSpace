@@ -33,13 +33,14 @@ service cloud.firestore {
 
     // Fetches the parent tournament document to check managerId.
     // Used inside subcollection rules.
-    function getTournament(tournamentId) {
-      return get(/databases/$(database)/documents/tournaments/$(tournamentId));
+    function getTournament(coll, tid) {
+      let docPath = '/databases/(default)/documents/' + coll + '/' + tid;
+      return get(path(docPath));
     }
 
-    function isTournamentManager(tournamentId) {
+    function isTournamentManager(coll, tournamentId) {
       return isAuthenticated()
-        && getTournament(tournamentId).data.managerId == request.auth.uid;
+        && getTournament(coll, tournamentId).data.managerId == request.auth.uid;
     }
 
     // Validates that only allowed fields changed (no extra keys snuck in).
@@ -48,78 +49,87 @@ service cloud.firestore {
     }
 
     // ----------------------------------------------------------
-    // /tournaments/{tournamentId}
+    // /{coll}/{tournamentId} (covers tournaments and badminton_tournaments)
     // ----------------------------------------------------------
-    match /tournaments/{tournamentId} {
+    match /{coll}/{tournamentId} {
+      allow read, write: if false; // Default fail, overrides inside
+
 
       // Public: anyone can browse the tournament list and view details.
-      allow read: if true;
+      allow read: if (coll == 'tournaments' || coll == 'badminton_tournaments');
 
       // Authenticated users can create a tournament.
       // Constraints: they must be the manager, status must start as REGISTRATION.
-      allow create: if isAuthenticated()
+      allow create: if (coll == 'tournaments' || coll == 'badminton_tournaments') 
+        && isAuthenticated()
         && request.resource.data.managerId == request.auth.uid
         && request.resource.data.status == 'REGISTRATION';
 
       // Only the manager can update the tournament.
       // managerId is immutable after creation — prevents ownership hijacking.
-      allow update: if isUser(resource.data.managerId)
+      allow update: if (coll == 'tournaments' || coll == 'badminton_tournaments') 
+        && isUser(resource.data.managerId)
         && request.resource.data.managerId == resource.data.managerId;
 
       // Only the manager can delete the tournament.
-      allow delete: if isUser(resource.data.managerId);
+      allow delete: if (coll == 'tournaments' || coll == 'badminton_tournaments') 
+        && isUser(resource.data.managerId);
 
       // ----------------------------------------------------------
-      // /tournaments/{tournamentId}/teams/{teamId}
+      // /{coll}/{tournamentId}/teams/{teamId}
       // ----------------------------------------------------------
       match /teams/{teamId} {
 
         // Public: anyone can see the team list.
-        allow read: if true;
+        allow read: if (coll == 'tournaments' || coll == 'badminton_tournaments');
 
         // Any authenticated user can register a team.
         // Rules:
         //   - captainId must be their own uid (no impersonation)
         //   - Regular users can only register as PENDING
         //   - Managers can directly register as APPROVED (manual add flow)
-        allow create: if isAuthenticated()
+        allow create: if (coll == 'tournaments' || coll == 'badminton_tournaments')
+          && isAuthenticated()
           && request.resource.data.captainId == request.auth.uid
           && (
             request.resource.data.status == 'PENDING'
-            || (request.resource.data.status == 'APPROVED' && isTournamentManager(tournamentId))
+            || (request.resource.data.status == 'APPROVED' && isTournamentManager(coll, tournamentId))
           );
 
         // Two separate update paths:
         //   1. Captain: can edit name, players, colorHex — cannot touch status or captainId
         //   2. Manager: can edit anything (approve/reject, correct data, etc.)
-        allow update: if
-          (isUser(resource.data.captainId)
-            && onlyChanged(['name', 'players', 'colorHex'])
-          )
-          || isTournamentManager(tournamentId);
+        allow update: if (coll == 'tournaments' || coll == 'badminton_tournaments')
+          && (
+            (isUser(resource.data.captainId) && onlyChanged(['name', 'players', 'colorHex']))
+            || isTournamentManager(coll, tournamentId)
+          );
 
         // Captain can remove their own team; manager can remove any team.
-        allow delete: if isUser(resource.data.captainId)
-          || isTournamentManager(tournamentId);
+        allow delete: if (coll == 'tournaments' || coll == 'badminton_tournaments')
+          && (isUser(resource.data.captainId) || isTournamentManager(coll, tournamentId));
       }
 
       // ----------------------------------------------------------
-      // /tournaments/{tournamentId}/matches/{matchId}
+      // /{coll}/{tournamentId}/matches/{matchId}
       // ----------------------------------------------------------
       match /matches/{matchId} {
 
         // Public: anyone can view live scores and fixtures.
-        allow read: if true;
+        allow read: if (coll == 'tournaments' || coll == 'badminton_tournaments');
 
         // Only the tournament manager can create matches (on tournament start).
-        allow create: if isTournamentManager(tournamentId);
+        allow create: if (coll == 'tournaments' || coll == 'badminton_tournaments')
+          && isTournamentManager(coll, tournamentId);
 
         // Only the tournament manager can update match scores/status.
         // updatedAt is always expected to change, so no field restriction here.
-        allow update: if isTournamentManager(tournamentId);
+        allow update: if (coll == 'tournaments' || coll == 'badminton_tournaments')
+          && isTournamentManager(coll, tournamentId);
 
         // Only the tournament manager can delete matches (reset draws).
-        allow delete: if isTournamentManager(tournamentId);
+        allow delete: if (coll == 'tournaments' || coll == 'badminton_tournaments')
+          && isTournamentManager(coll, tournamentId);
       }
     }
   }

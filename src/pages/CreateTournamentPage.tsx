@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 import { collection, getDocs, doc, writeBatch, getDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
-export default function CreateTournamentPage() {
+export default function CreateTournamentPage({ sport = 'volleyball' }: { sport?: 'volleyball' | 'badminton' }) {
   const navigate = useNavigate();
   const { user, requireAuth } = useAuth();
 
@@ -20,7 +20,8 @@ export default function CreateTournamentPage() {
     if (!copyFrom) return;
     const fetchOriginal = async () => {
       try {
-        const snap = await getDoc(doc(db, 'tournaments', copyFrom));
+        const coll = sport === 'badminton' ? 'badminton_tournaments' : 'tournaments';
+        const snap = await getDoc(doc(db, coll, copyFrom));
         if (snap.exists()) {
           const t = snap.data() as Tournament;
           setInitialData({
@@ -49,21 +50,22 @@ export default function CreateTournamentPage() {
           phases: data.phases,
           isAutoRules: data.isAutoRules,
           managerId: user!.uid
-        });
+        }, sport);
         
         if (data.copyTeams && copyFrom) {
-          const originalTeamsSnap = await getDocs(collection(db, 'tournaments', copyFrom, 'teams'));
+          const coll = sport === 'badminton' ? 'badminton_tournaments' : 'tournaments';
+          const originalTeamsSnap = await getDocs(collection(db, coll, copyFrom, 'teams'));
           if (!originalTeamsSnap.empty) {
             const batch = writeBatch(db);
             originalTeamsSnap.forEach(tDoc => {
-              const newTeamRef = doc(collection(db, 'tournaments', tId, 'teams'));
+              const newTeamRef = doc(collection(db, coll, tId, 'teams'));
               batch.set(newTeamRef, { ...tDoc.data(), createdAt: new Date() });
             });
             await batch.commit();
           }
         }
         
-        navigate(`/volleyball/tournament/${tId}`);
+        navigate(`/${sport}/tournament/${tId}`);
       } catch (err) {
         console.error(err);
         alert('Failed to create tournament');
@@ -73,7 +75,7 @@ export default function CreateTournamentPage() {
 
   return (
     <div className="max-w-3xl mx-auto w-full pt-8 pb-12">
-      <button onClick={() => navigate('/volleyball')} className="btn btn-ghost mb-6">
+      <button onClick={() => navigate(`/${sport}`)} className="btn btn-ghost mb-6">
         <ArrowLeft className="w-4 h-4 mr-2" /> Back to Hub
       </button>
 

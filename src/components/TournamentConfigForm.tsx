@@ -10,6 +10,7 @@ export interface TournamentConfigData {
   phases: TournamentPhase[];
   isAutoRules?: boolean;
   copyTeams?: boolean;
+  oversPerInning?: number;
 }
 
 interface TournamentConfigFormProps {
@@ -18,9 +19,10 @@ interface TournamentConfigFormProps {
   submitLabel: string;
   onCancel?: () => void;
   allowCopyTeams?: boolean;
+  sport?: 'volleyball' | 'badminton' | 'cricket';
 }
 
-export function TournamentConfigForm({ initialData, onSubmit, submitLabel, onCancel, allowCopyTeams }: TournamentConfigFormProps) {
+export function TournamentConfigForm({ initialData, onSubmit, submitLabel, onCancel, allowCopyTeams, sport = 'volleyball' }: TournamentConfigFormProps) {
   const [step, setStep] = useState(1);
   const [name, setName] = useState(initialData?.name || '');
   const [expectedTeams, setExpectedTeams] = useState(initialData?.expectedTeams || 8);
@@ -31,6 +33,7 @@ export function TournamentConfigForm({ initialData, onSubmit, submitLabel, onCan
   );
   const [isAutoRules, setIsAutoRules] = useState(initialData?.isAutoRules ?? true);
   const [copyTeams, setCopyTeams] = useState(initialData?.copyTeams || false);
+  const [oversPerInning, setOversPerInning] = useState(initialData?.oversPerInning || 20);
   const [loading, setLoading] = useState(false);
 
   const addPhase = () => {
@@ -68,7 +71,7 @@ export function TournamentConfigForm({ initialData, onSubmit, submitLabel, onCan
 
     setLoading(true);
     try {
-      await onSubmit({ name, expectedTeams, phases: finalPhases, isAutoRules, copyTeams });
+      await onSubmit({ name, expectedTeams, phases: finalPhases, isAutoRules, copyTeams, oversPerInning });
     } finally {
       setLoading(false);
     }
@@ -111,6 +114,20 @@ export function TournamentConfigForm({ initialData, onSubmit, submitLabel, onCan
                 className="input"
               />
             </div>
+
+            {sport === 'cricket' && (
+              <div>
+                <label className="block text-sm font-medium text-slate-400 mb-2">Overs per Inning</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={oversPerInning || ''}
+                  onChange={(e) => setOversPerInning(parseInt(e.target.value) || 0)}
+                  className="input"
+                  placeholder="e.g. 20"
+                />
+              </div>
+            )}
 
             <div className="flex items-start gap-3 bg-slate-900/50 p-4 rounded-lg border border-primary/30">
               <input

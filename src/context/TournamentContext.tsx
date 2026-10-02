@@ -23,7 +23,7 @@ export const useTournament = () => useContext(TournamentContext);
 export const useTeams = () => useContext(TeamsContext);
 export const useMatches = () => useContext(MatchesContext);
 
-export const TournamentProvider = ({ tournamentId, sport = 'volleyball', children }: { tournamentId: string, sport?: 'volleyball' | 'badminton', children: React.ReactNode }) => {
+export const TournamentProvider = ({ tournamentId, sport = 'volleyball', children }: { tournamentId: string, sport?: 'volleyball' | 'badminton' | 'cricket', children: React.ReactNode }) => {
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);

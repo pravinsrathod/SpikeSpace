@@ -5,7 +5,7 @@ import { subscribeToTournaments, type Tournament } from '../firebase/db';
 import { useAuth } from '../context/AuthContext';
 import { motion } from 'framer-motion';
 
-export default function HomeHubPage({ sport = 'volleyball' }: { sport?: 'volleyball' | 'badminton' }) {
+export default function HomeHubPage({ sport = 'volleyball' }: { sport?: 'volleyball' | 'badminton' | 'cricket' }) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [tournaments, setTournaments] = useState<Tournament[]>([]);

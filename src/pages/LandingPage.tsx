@@ -4,13 +4,13 @@ import { clsx } from 'clsx';
 import { motion } from 'framer-motion';
 
 const SPORTS = [
+  { id: 'cricket', name: 'Cricket', emoji: '🏏', active: true, path: '/cricket' },
   { id: 'volleyball', name: 'Volleyball', emoji: '🏐', active: true, path: '/volleyball' },
   { id: 'badminton', name: 'Badminton', emoji: '🏸', active: true, path: '/badminton' },
   { id: 'basketball', name: 'Basketball', emoji: '🏀', active: false },
   { id: 'soccer', name: 'Soccer', emoji: '⚽', active: false },
   { id: 'tennis', name: 'Tennis', emoji: '🎾', active: false },
   { id: 'table_tennis', name: 'Table Tennis', emoji: '🏓', active: false },
-  { id: 'cricket', name: 'Cricket', emoji: '🏏', active: false },
 ];
 
 export default function LandingPage() {

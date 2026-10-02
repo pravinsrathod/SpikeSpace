@@ -186,7 +186,7 @@ export const generateDynamicTournament = (tournamentId: string, teams: Team[], p
         }
       }
 
-      // Propagate BYEs within this phase
+      // Propagate BYEs within this phase iteratively to avoid stack overflow
       const propagateByes = (mList: Match[]) => {
         let changed = true;
         while (changed) {
@@ -197,6 +197,7 @@ export const generateDynamicTournament = (tournamentId: string, teams: Team[], p
               if (nextMatch) {
                 const isTeamA = match.position % 2 === 0;
                 const winnerName = match.winnerId === match.teamAId ? match.teamAName : match.teamBName;
+                // we don't have teams array with placeholders, so we just pass the ID if phase 1, or placeholder ID
                 const winnerId = match.winnerId;
 
                 if (isTeamA && nextMatch.teamAId !== winnerId) {

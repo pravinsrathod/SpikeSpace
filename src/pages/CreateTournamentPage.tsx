@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 import { collection, getDocs, doc, writeBatch, getDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
-export default function CreateTournamentPage({ sport = 'volleyball' }: { sport?: 'volleyball' | 'badminton' }) {
+export default function CreateTournamentPage({ sport = 'volleyball' }: { sport?: 'volleyball' | 'badminton' | 'cricket' }) {
   const navigate = useNavigate();
   const { user, requireAuth } = useAuth();
 
@@ -20,7 +20,7 @@ export default function CreateTournamentPage({ sport = 'volleyball' }: { sport?:
     if (!copyFrom) return;
     const fetchOriginal = async () => {
       try {
-        const coll = sport === 'badminton' ? 'badminton_tournaments' : 'tournaments';
+        const coll = sport === 'cricket' ? 'cricket_tournaments' : (sport === 'badminton' ? 'badminton_tournaments' : 'tournaments');
         const snap = await getDoc(doc(db, coll, copyFrom));
         if (snap.exists()) {
           const t = snap.data() as Tournament;
@@ -28,7 +28,8 @@ export default function CreateTournamentPage({ sport = 'volleyball' }: { sport?:
             name: `${t.name} (Copy)`,
             expectedTeams: t.expectedTeams,
             phases: t.phases,
-            copyTeams: true
+            copyTeams: true,
+            oversPerInning: (t as any).oversPerInning
           });
         }
       } catch (e) {
@@ -49,11 +50,12 @@ export default function CreateTournamentPage({ sport = 'volleyball' }: { sport?:
           status: 'REGISTRATION',
           phases: data.phases,
           isAutoRules: data.isAutoRules,
-          managerId: user!.uid
-        }, sport);
+          managerId: user!.uid,
+          oversPerInning: data.oversPerInning
+        } as any, sport);
         
         if (data.copyTeams && copyFrom) {
-          const coll = sport === 'badminton' ? 'badminton_tournaments' : 'tournaments';
+          const coll = sport === 'cricket' ? 'cricket_tournaments' : (sport === 'badminton' ? 'badminton_tournaments' : 'tournaments');
           const originalTeamsSnap = await getDocs(collection(db, coll, copyFrom, 'teams'));
           if (!originalTeamsSnap.empty) {
             const batch = writeBatch(db);
@@ -96,6 +98,7 @@ export default function CreateTournamentPage({ sport = 'volleyball' }: { sport?:
             allowCopyTeams={!!copyFrom}
             onSubmit={handleCreate} 
             submitLabel={user ? "Save & Configure" : "Sign in to Create"}
+            sport={sport}
           />
         )}
       </div>

@@ -12,7 +12,7 @@ import { generateDynamicTournament } from '../utils/tournamentGenerator';
 import { determineTournamentWinner } from '../utils/progression';
 import { motion } from 'framer-motion';
 
-export default function TournamentBoardPage({ sport = 'volleyball' }: { sport?: 'volleyball' | 'badminton' }) {
+export default function TournamentBoardPage({ sport = 'volleyball' }: { sport?: 'volleyball' | 'badminton' | 'cricket' }) {
   const { tournament } = useTournament();
   const matches = useMatches();
   const teams = useTeams();
@@ -196,7 +196,7 @@ export default function TournamentBoardPage({ sport = 'volleyball' }: { sport?: 
 
           {activeTab === 'standings' ? (
             activePhase?.type === 'ROUND_ROBIN' ? (
-              <StandingsTable phaseId={activePhase.id} />
+              <StandingsTable phaseId={activePhase.id} sport={sport} />
             ) : (
               <motion.div 
                 initial={{ opacity: 0, scale: 0.95 }} 

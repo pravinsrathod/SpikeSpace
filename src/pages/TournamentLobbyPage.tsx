@@ -10,7 +10,7 @@ import { useAuth } from '../context/AuthContext';
 import { generateDynamicTournament } from '../utils/tournamentGenerator';
 import { TournamentConfigForm, type TournamentConfigData } from '../components/TournamentConfigForm';
 import { v4 as uuidv4 } from 'uuid';
-export default function TournamentLobbyPage({ sport = 'volleyball' }: { sport?: 'volleyball' | 'badminton' }) {
+export default function TournamentLobbyPage({ sport = 'volleyball' }: { sport?: 'volleyball' | 'badminton' | 'cricket' }) {
   const navigate = useNavigate();
   const { tournament } = useTournament();
   const teams = useTeams();

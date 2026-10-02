@@ -3,61 +3,26 @@ import { useTeams, useMatches } from '../context/TournamentContext';
 import { Trophy } from 'lucide-react';
 import { clsx } from 'clsx';
 
+import { calculateStandings, calculateCricketStandings } from '../utils/progression';
+
 interface StandingsTableProps {
   phaseId?: string;
   poolTeamIds?: string[];
+  sport?: 'volleyball' | 'badminton' | 'cricket';
 }
 
-export const StandingsTable: React.FC<StandingsTableProps> = ({ phaseId }) => {
+export const StandingsTable: React.FC<StandingsTableProps> = ({ phaseId, sport = 'volleyball' }) => {
   const teams = useTeams();
   const matches = useMatches();
 
   const standings = useMemo(() => {
-    const stats = teams.map(team => ({
-      ...team,
-      played: 0, won: 0, lost: 0, setsWon: 0, setsLost: 0, points: 0,
-      pointsScored: 0, pointsConceded: 0
-    }));
-
-    matches.forEach(match => {
-      if (match.status !== 'COMPLETED') return;
-      if (phaseId && match.phaseId !== phaseId) return; // Filter by phase
-      
-      const tA = stats.find(t => t.id === match.teamAId);
-      const tB = stats.find(t => t.id === match.teamBId);
-
-      if (tA && tB) {
-        tA.played++; tB.played++;
-        tA.setsWon += match.setsWonA; tB.setsWon += match.setsWonB;
-        tA.setsLost += match.setsWonB; tB.setsLost += match.setsWonA;
-
-        if (match.winnerId === tA.id) {
-          tA.won++; tB.lost++; tA.points += 3;
-        } else if (match.winnerId === tB.id) {
-          tB.won++; tA.lost++; tB.points += 3;
-        }
-
-        const ptsA = (match.set1ScoreA||0) + (match.set2ScoreA||0) + (match.set3ScoreA||0) + (match.set4ScoreA||0) + (match.set5ScoreA||0);
-        const ptsB = (match.set1ScoreB||0) + (match.set2ScoreB||0) + (match.set3ScoreB||0) + (match.set4ScoreB||0) + (match.set5ScoreB||0);
-        
-        tA.pointsScored += ptsA;
-        tA.pointsConceded += ptsB;
-        tB.pointsScored += ptsB;
-        tB.pointsConceded += ptsA;
-      }
-    });
-
-    return stats.sort((a, b) => {
-      if (b.points !== a.points) return b.points - a.points;
-      const setDiffA = a.setsWon - a.setsLost;
-      const setDiffB = b.setsWon - b.setsLost;
-      if (setDiffB !== setDiffA) return setDiffB - setDiffA;
-      const ptDiffA = a.pointsScored - a.pointsConceded;
-      const ptDiffB = b.pointsScored - b.pointsConceded;
-      if (ptDiffB !== ptDiffA) return ptDiffB - ptDiffA;
-      return b.pointsScored - a.pointsScored;
-    });
-  }, [teams, matches, phaseId]);
+    const phaseMatches = phaseId ? matches.filter(m => m.phaseId === phaseId) : matches;
+    if (sport === 'cricket') {
+      return calculateCricketStandings(phaseMatches, teams);
+    } else {
+      return calculateStandings(phaseMatches, teams);
+    }
+  }, [teams, matches, phaseId, sport]);
 
   // If a phase is selected, show teams that belong to this phase
   const displayStandings = useMemo(() => {
@@ -88,8 +53,17 @@ export const StandingsTable: React.FC<StandingsTableProps> = ({ phaseId }) => {
                 <th className="px-4 py-3 text-center">P</th>
                 <th className="px-4 py-3 text-center">W</th>
                 <th className="px-4 py-3 text-center">L</th>
-                <th className="px-4 py-3 text-center" title="Set Difference">S.Diff</th>
-                <th className="px-4 py-3 text-center" title="Point Difference">P.Diff</th>
+                {sport === 'cricket' ? (
+                  <>
+                    <th className="px-4 py-3 text-center" title="Net Run Rate">NRR</th>
+                    <th className="px-4 py-3 text-center" title="Runs/Overs">R/O</th>
+                  </>
+                ) : (
+                  <>
+                    <th className="px-4 py-3 text-center" title="Set Difference">S.Diff</th>
+                    <th className="px-4 py-3 text-center" title="Point Difference">P.Diff</th>
+                  </>
+                )}
                 <th className="px-4 py-3 text-center text-primary font-bold">PTS</th>
               </tr>
             </thead>
@@ -112,10 +86,21 @@ export const StandingsTable: React.FC<StandingsTableProps> = ({ phaseId }) => {
                   <td className="px-4 py-3 text-center">{team.played}</td>
                   <td className="px-4 py-3 text-center text-emerald-500">{team.won}</td>
                   <td className="px-4 py-3 text-center text-red-500">{team.lost}</td>
-                  <td className="px-4 py-3 text-center">{team.setsWon - team.setsLost > 0 ? `+${team.setsWon - team.setsLost}` : team.setsWon - team.setsLost}</td>
-                  <td className="px-4 py-3 text-center text-slate-300">
-                    {team.pointsScored - team.pointsConceded > 0 ? `+${team.pointsScored - team.pointsConceded}` : team.pointsScored - team.pointsConceded}
-                  </td>
+                  {sport === 'cricket' ? (
+                    <>
+                      <td className="px-4 py-3 text-center">{(team as any).nrr > 0 ? `+${(team as any).nrr.toFixed(2)}` : (team as any).nrr.toFixed(2)}</td>
+                      <td className="px-4 py-3 text-center text-slate-300">
+                        {(team as any).runsScored}/{((team as any).oversFaced).toFixed(1)}
+                      </td>
+                    </>
+                  ) : (
+                    <>
+                      <td className="px-4 py-3 text-center">{(() => { const diff = ((team as any).setsWon || 0) - ((team as any).setsLost || 0); return diff > 0 ? `+${diff}` : diff; })()}</td>
+                      <td className="px-4 py-3 text-center text-slate-300">
+                        {(() => { const diff = ((team as any).pointsScored || 0) - ((team as any).pointsConceded || 0); return diff > 0 ? `+${diff}` : diff; })()}
+                      </td>
+                    </>
+                  )}
                   <td className="px-4 py-3 text-center font-bold text-lg">{team.points}</td>
                 </tr>
               ))}
@@ -162,18 +147,37 @@ export const StandingsTable: React.FC<StandingsTableProps> = ({ phaseId }) => {
                 <span className="text-[10px] text-slate-500 font-bold uppercase mb-1">W - L</span>
                 <span className="font-bold text-emerald-400">{team.won} <span className="text-slate-500 font-normal">-</span> <span className="text-red-400">{team.lost}</span></span>
               </div>
-              <div className="flex flex-col items-center flex-1 border-r border-white/5">
-                <span className="text-[10px] text-slate-500 font-bold uppercase mb-1">S.Diff</span>
-                <span className="font-bold text-white">
-                  {team.setsWon - team.setsLost > 0 ? `+${team.setsWon - team.setsLost}` : team.setsWon - team.setsLost}
-                </span>
-              </div>
-              <div className="flex flex-col items-center flex-1">
-                <span className="text-[10px] text-slate-500 font-bold uppercase mb-1">P.Diff</span>
-                <span className="font-bold text-slate-300">
-                  {team.pointsScored - team.pointsConceded > 0 ? `+${team.pointsScored - team.pointsConceded}` : team.pointsScored - team.pointsConceded}
-                </span>
-              </div>
+              {sport === 'cricket' ? (
+                <>
+                  <div className="flex flex-col items-center flex-1 border-r border-white/5">
+                    <span className="text-[10px] text-slate-500 font-bold uppercase mb-1">NRR</span>
+                    <span className="font-bold text-white">
+                      {(team as any).nrr > 0 ? `+${(team as any).nrr.toFixed(2)}` : (team as any).nrr.toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex flex-col items-center flex-1">
+                    <span className="text-[10px] text-slate-500 font-bold uppercase mb-1">Runs/Overs</span>
+                    <span className="font-bold text-slate-300">
+                      {(team as any).runsScored}/{((team as any).oversFaced).toFixed(1)}
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex flex-col items-center flex-1 border-r border-white/5">
+                    <span className="text-[10px] text-slate-500 font-bold uppercase mb-1">S.Diff</span>
+                    <span className="font-bold text-white">
+                      {(() => { const diff = ((team as any).setsWon || 0) - ((team as any).setsLost || 0); return diff > 0 ? `+${diff}` : diff; })()}
+                    </span>
+                  </div>
+                  <div className="flex flex-col items-center flex-1">
+                    <span className="text-[10px] text-slate-500 font-bold uppercase mb-1">P.Diff</span>
+                    <span className="font-bold text-slate-300">
+                      {(() => { const diff = ((team as any).pointsScored || 0) - ((team as any).pointsConceded || 0); return diff > 0 ? `+${diff}` : diff; })()}
+                    </span>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         ))}

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, useParams, Navigate, Link } from 'react-router-dom';
 import { TournamentProvider, useTournament } from './context/TournamentContext';
 import HomeHubPage from './pages/HomeHubPage';
@@ -7,11 +8,12 @@ import TournamentBoardPage from './pages/TournamentBoardPage';
 import MatchDashboardPage from './pages/MatchDashboardPage';
 import LandingPage from './pages/LandingPage';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
-import { Trophy, LogIn, LogOut, User as UserIcon } from 'lucide-react';
+import { Trophy, LogIn, User as UserIcon, Settings } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { AccountSettingsModal } from './components/AccountSettingsModal';
 
 // Wrapper to provide tournament context based on URL param
-function TournamentWrapper({ sport = 'volleyball' }: { sport?: 'volleyball' | 'badminton' }) {
+function TournamentWrapper({ sport = 'volleyball' }: { sport?: 'volleyball' | 'badminton' | 'cricket' }) {
   const { id } = useParams<{ id: string }>();
   if (!id) return <Navigate to="/" />;
   return (
@@ -22,7 +24,7 @@ function TournamentWrapper({ sport = 'volleyball' }: { sport?: 'volleyball' | 'b
 }
 
 // Internal router that decides which view to show based on tournament status
-function TournamentRouter({ sport }: { sport: 'volleyball' | 'badminton' }) {
+function TournamentRouter({ sport }: { sport: 'volleyball' | 'badminton' | 'cricket' }) {
   const { tournament, loading } = useTournament();
 
   if (loading) {
@@ -52,14 +54,15 @@ function TournamentRouter({ sport }: { sport: 'volleyball' | 'badminton' }) {
   );
 }
 
-function MatchWrapper({ sport }: { sport: 'volleyball' | 'badminton' }) {
+function MatchWrapper({ sport }: { sport: 'volleyball' | 'badminton' | 'cricket' }) {
   const { matchId } = useParams<{ matchId: string }>();
   if (!matchId) return <Navigate to=".." />;
   return <MatchDashboardPage matchId={matchId} sport={sport} />;
 }
 
 function AppContent() {
-  const { user, requireAuth, logOut } = useAuth();
+  const { user, requireAuth } = useAuth();
+  const [showAccountModal, setShowAccountModal] = useState(false);
 
   return (
     <Router>
@@ -74,19 +77,14 @@ function AppContent() {
 
             <div className="flex items-center gap-4">
               {user ? (
-                <div className="flex items-center gap-4">
-                  <div className="hidden sm:flex items-center gap-2 text-sm text-slate-300">
-                    <UserIcon className="w-4 h-4" />
-                    <span className="truncate max-w-[150px]">{user.email}</span>
-                  </div>
-                  <button 
-                    onClick={logOut}
-                    className="btn btn-outline btn-sm border-white/10 hover:bg-white/5"
-                  >
-                    <LogOut className="w-4 h-4 sm:mr-2" />
-                    <span className="hidden sm:inline">Sign Out</span>
-                  </button>
-                </div>
+                <button 
+                  onClick={() => setShowAccountModal(true)}
+                  className="flex items-center gap-2 bg-slate-800/80 hover:bg-slate-800 border border-white/10 px-3 py-1.5 rounded-full text-sm text-slate-200 transition-colors"
+                >
+                  <UserIcon className="w-4 h-4 text-primary" />
+                  <span className="truncate max-w-[150px] font-medium">{user.email}</span>
+                  <Settings className="w-3.5 h-3.5 text-slate-400" />
+                </button>
               ) : (
                 <button 
                   onClick={() => requireAuth(() => {})}
@@ -100,6 +98,11 @@ function AppContent() {
           </div>
         </header>
 
+        <AccountSettingsModal 
+          isOpen={showAccountModal}
+          onClose={() => setShowAccountModal(false)}
+        />
+
         {/* Main Content Area */}
         <main className="flex-1 overflow-y-auto hide-scrollbar container mx-auto p-4 md:p-6 flex flex-col relative">
           <Routes>
@@ -112,6 +115,9 @@ function AppContent() {
             <Route path="/badminton" element={<HomeHubPage sport="badminton" />} />
             <Route path="/badminton/create" element={<CreateTournamentPage sport="badminton" />} />
             <Route path="/badminton/tournament/:id/*" element={<TournamentWrapper sport="badminton" />} />
+            <Route path="/cricket" element={<HomeHubPage sport="cricket" />} />
+            <Route path="/cricket/create" element={<CreateTournamentPage sport="cricket" />} />
+            <Route path="/cricket/tournament/:id/*" element={<TournamentWrapper sport="cricket" />} />
           </Routes>
         </main>
       </div>

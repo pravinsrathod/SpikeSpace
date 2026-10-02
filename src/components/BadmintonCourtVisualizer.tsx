@@ -4,9 +4,11 @@ interface BadmintonCourtVisualizerProps {
   teamAColor: string;
   teamBColor: string;
   serve: 'A' | 'B' | null;
+  scoreA?: number;
+  scoreB?: number;
 }
 
-export const BadmintonCourtVisualizer: React.FC<BadmintonCourtVisualizerProps> = ({ teamAColor, teamBColor, serve }) => {
+export const BadmintonCourtVisualizer: React.FC<BadmintonCourtVisualizerProps> = ({ teamAColor, teamBColor, serve, scoreA = 0, scoreB = 0 }) => {
   return (
     <div className="relative w-full max-w-2xl mx-auto aspect-[2/1] bg-[#1c8558] rounded-sm shadow-inner border-[6px] border-[#136140] overflow-hidden">
       {/* Outer bounds lines (Doubles) */}
@@ -52,9 +54,10 @@ export const BadmintonCourtVisualizer: React.FC<BadmintonCourtVisualizerProps> =
       {/* Serve Indicator Animation */}
       {serve && (
         <div 
-          className="absolute top-1/2 w-4 h-4 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,1)] transform -translate-y-1/2 z-10 transition-all duration-700 ease-in-out"
+          className="absolute w-4 h-4 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,1)] transform -translate-y-1/2 z-10 transition-all duration-700 ease-in-out"
           style={{ 
             left: serve === 'A' ? '25%' : '75%',
+            top: serve === 'A' ? (scoreA % 2 === 0 ? '75%' : '25%') : (scoreB % 2 === 0 ? '25%' : '75%'),
             transform: 'translate(-50%, -50%)' 
           }}
         >

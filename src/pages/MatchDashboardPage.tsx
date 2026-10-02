@@ -6,8 +6,10 @@ import { clsx } from 'clsx';
 import { checkDynamicProgression } from '../utils/progression';
 import { useNavigate } from 'react-router-dom';
 import { CourtVisualizer } from '../components/CourtVisualizer';
+import { BadmintonCourtVisualizer } from '../components/BadmintonCourtVisualizer';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
+import CricketMatchDashboard from './CricketMatchDashboard';
 
 // Helper to read set scores dynamically
 function getSetScore(match: Match, setNum: number): { a: number; b: number } {
@@ -154,7 +156,7 @@ function RulesConfigPanel({ match, onStart, sport = 'volleyball' }: { match: Mat
           ) : (
             <>Single set to <strong className="text-secondary">{pointsPerSet}</strong> pts.</>
           )}{' '}
-          Must win by 2.
+          {sport === 'badminton' ? 'Must win by 2 (Cap at 30).' : 'Must win by 2.'}
         </div>
 
         <button
@@ -171,7 +173,11 @@ function RulesConfigPanel({ match, onStart, sport = 'volleyball' }: { match: Mat
 }
 
 
-export default function MatchDashboardPage({ matchId, sport = 'volleyball' }: { matchId: string; sport?: 'volleyball' | 'badminton' }) {
+export default function MatchDashboardPage({ matchId, sport = 'volleyball' }: { matchId: string; sport?: 'volleyball' | 'badminton' | 'cricket' }) {
+  if (sport === 'cricket') {
+    return <CricketMatchDashboard matchId={matchId} />;
+  }
+
   const navigate = useNavigate();
   const { tournament } = useTournament();
   const matches = useMatches();
@@ -349,10 +355,12 @@ export default function MatchDashboardPage({ matchId, sport = 'volleyball' }: { 
       updates.currentServe = team;
     }
 
-    // Check set completion
     let setWinner: 'A' | 'B' | null = null;
-    if (newA >= targetScore && newA - newB >= 2) setWinner = 'A';
-    if (newB >= targetScore && newB - newA >= 2) setWinner = 'B';
+    const isBadminton = sport === 'badminton';
+    const pointCap = isBadminton ? 30 : Infinity;
+
+    if ((newA >= targetScore && newA - newB >= 2) || (isBadminton && newA === pointCap)) setWinner = 'A';
+    if ((newB >= targetScore && newB - newA >= 2) || (isBadminton && newB === pointCap)) setWinner = 'B';
 
     if (setWinner) {
       if (setWinner === 'A') updates.setsWonA = match.setsWonA + 1;
@@ -371,14 +379,16 @@ export default function MatchDashboardPage({ matchId, sport = 'volleyball' }: { 
       const baseScore = team === 'A' ? `${match.teamAName} ${newA}, ${match.teamBName} ${newB}` : `${match.teamBName} ${newB}, ${match.teamAName} ${newA}`;
       const isMatchPoint = isALeading ? match.setsWonA === setsToWin - 1 : match.setsWonB === setsToWin - 1;
 
-      if (maxScore >= targetScore && maxScore - minScore >= 2) {
+      if (setWinner) {
         announcement = isMatchPoint ? `Game, Set, Match, ${leaderName}` : `Set won by ${leaderName}`;
-      } else if (newA === newB && newA >= targetScore - 1) {
+      } else if (sport !== 'badminton' && newA === newB && newA >= targetScore - 1) {
         announcement = "Deuce";
-      } else if (maxScore >= targetScore && maxScore - minScore === 1) {
+      } else if (sport !== 'badminton' && maxScore >= targetScore && maxScore - minScore === 1) {
         announcement = `Advantage ${leaderName}`;
       } else if (maxScore >= targetScore - 1) {
         announcement = `${baseScore}. ${isMatchPoint ? 'Match' : 'Set'} Point.`;
+      } else if (newA === newB) {
+        announcement = `${newA} all`;
       } else {
         announcement = baseScore;
       }
@@ -537,19 +547,21 @@ export default function MatchDashboardPage({ matchId, sport = 'volleyball' }: { 
           </div>
 
           <div className="p-3 shrink-0 flex justify-between items-center bg-slate-900/30">
-            <button
-              disabled={scoringDisabled || match.timeoutsRemainingA === 0}
-              onClick={() => handleTimeout('A')}
-              className={clsx(
-                "px-3 py-1.5 rounded text-xs font-bold transition-colors",
-                match.timeoutsRemainingA > 0 && !scoringDisabled 
-                  ? "bg-amber-500/20 text-amber-500 hover:bg-amber-500/30 active:bg-amber-500/40" 
-                  : "bg-slate-800 text-slate-500 opacity-50"
-              )}
-            >
-              <Timer className="w-3.5 h-3.5 inline mr-1" />
-              T/O ({match.timeoutsRemainingA})
-            </button>
+            {sport !== 'badminton' ? (
+              <button
+                disabled={scoringDisabled || match.timeoutsRemainingA === 0}
+                onClick={() => handleTimeout('A')}
+                className={clsx(
+                  "px-3 py-1.5 rounded text-xs font-bold transition-colors",
+                  match.timeoutsRemainingA > 0 && !scoringDisabled 
+                    ? "bg-amber-500/20 text-amber-500 hover:bg-amber-500/30 active:bg-amber-500/40" 
+                    : "bg-slate-800 text-slate-500 opacity-50"
+                )}
+              >
+                <Timer className="w-3.5 h-3.5 inline mr-1" />
+                T/O ({match.timeoutsRemainingA})
+              </button>
+            ) : <div />}
             {match.currentServe === 'A' && (
               <span className="text-emerald-500 font-bold text-xs animate-pulse flex items-center">
                 <Flag className="w-3.5 h-3.5 mr-1"/> Serve
@@ -597,19 +609,21 @@ export default function MatchDashboardPage({ matchId, sport = 'volleyball' }: { 
           </div>
 
           <div className="p-3 shrink-0 flex justify-between items-center bg-slate-900/30">
-            <button
-              disabled={scoringDisabled || match.timeoutsRemainingB === 0}
-              onClick={() => handleTimeout('B')}
-              className={clsx(
-                "px-3 py-1.5 rounded text-xs font-bold transition-colors",
-                match.timeoutsRemainingB > 0 && !scoringDisabled 
-                  ? "bg-amber-500/20 text-amber-500 hover:bg-amber-500/30 active:bg-amber-500/40" 
-                  : "bg-slate-800 text-slate-500 opacity-50"
-              )}
-            >
-              <Timer className="w-3.5 h-3.5 inline mr-1" />
-              T/O ({match.timeoutsRemainingB})
-            </button>
+            {sport !== 'badminton' ? (
+              <button
+                disabled={scoringDisabled || match.timeoutsRemainingB === 0}
+                onClick={() => handleTimeout('B')}
+                className={clsx(
+                  "px-3 py-1.5 rounded text-xs font-bold transition-colors",
+                  match.timeoutsRemainingB > 0 && !scoringDisabled 
+                    ? "bg-amber-500/20 text-amber-500 hover:bg-amber-500/30 active:bg-amber-500/40" 
+                    : "bg-slate-800 text-slate-500 opacity-50"
+                )}
+              >
+                <Timer className="w-3.5 h-3.5 inline mr-1" />
+                T/O ({match.timeoutsRemainingB})
+              </button>
+            ) : <div />}
             {match.currentServe === 'B' && (
               <span className="text-emerald-500 font-bold text-xs animate-pulse flex items-center">
                 <Flag className="w-3.5 h-3.5 mr-1"/> Serve
@@ -621,11 +635,21 @@ export default function MatchDashboardPage({ matchId, sport = 'volleyball' }: { 
       </div>
 
       <div className="px-4 pb-8">
-        <CourtVisualizer 
-          teamAColor={swappedSides ? tBColor : tAColor} 
-          teamBColor={swappedSides ? tAColor : tBColor} 
-          serve={match.currentServe ? (swappedSides ? (match.currentServe === 'A' ? 'B' : 'A') : match.currentServe) : null} 
-        />
+        {sport === 'badminton' ? (
+          <BadmintonCourtVisualizer 
+            teamAColor={swappedSides ? tBColor : tAColor} 
+            teamBColor={swappedSides ? tAColor : tBColor} 
+            serve={match.currentServe ? (swappedSides ? (match.currentServe === 'A' ? 'B' : 'A') : match.currentServe) : null} 
+            scoreA={swappedSides ? scoreB : scoreA}
+            scoreB={swappedSides ? scoreA : scoreB}
+          />
+        ) : (
+          <CourtVisualizer 
+            teamAColor={swappedSides ? tBColor : tAColor} 
+            teamBColor={swappedSides ? tAColor : tBColor} 
+            serve={match.currentServe ? (swappedSides ? (match.currentServe === 'A' ? 'B' : 'A') : match.currentServe) : null} 
+          />
+        )}
       </div>
 
       {/* History Bottom Sheet */}

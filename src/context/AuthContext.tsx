@@ -2,6 +2,9 @@ import React, { createContext, useContext, useEffect, useState, useRef } from 'r
 import { 
   onAuthStateChanged, 
   signOut,
+  deleteUser,
+  reauthenticateWithCredential,
+  EmailAuthProvider,
   type User
 } from 'firebase/auth';
 import { auth } from '../firebase/config';
@@ -11,6 +14,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   logOut: () => Promise<void>;
+  deleteAccount: (password?: string) => Promise<void>;
   requireAuth: (callback: () => void) => void;
 }
 
@@ -18,6 +22,7 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
   logOut: async () => {},
+  deleteAccount: async () => {},
   requireAuth: () => {}
 });
 
@@ -48,6 +53,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     await signOut(auth);
   };
 
+  const deleteAccount = async (password?: string) => {
+    const currentUser = auth.currentUser;
+    if (!currentUser) return;
+
+    if (password && currentUser.email) {
+      const credential = EmailAuthProvider.credential(currentUser.email, password);
+      await reauthenticateWithCredential(currentUser, credential);
+    }
+    await deleteUser(currentUser);
+  };
+
   const requireAuth = (callback: () => void) => {
     if (user) {
       callback();
@@ -58,7 +74,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, logOut, requireAuth }}>
+    <AuthContext.Provider value={{ user, loading, logOut, deleteAccount, requireAuth }}>
       {children}
       {showModal && (
         <AuthModal 

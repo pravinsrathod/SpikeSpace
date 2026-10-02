@@ -51,7 +51,9 @@ export default function CreateTournamentPage({ sport = 'volleyball' }: { sport?:
           phases: data.phases,
           isAutoRules: data.isAutoRules,
           managerId: user!.uid,
-          oversPerInning: data.oversPerInning
+          oversPerInning: data.oversPerInning,
+          date: data.date,
+          location: data.location
         } as any, sport);
         
         if (data.copyTeams && copyFrom) {

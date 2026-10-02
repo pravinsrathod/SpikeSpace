@@ -22,6 +22,8 @@ export interface Tournament {
   name: string;
   managerId: string;
   expectedTeams: number;
+  date?: string;
+  location?: string;
   status: 'REGISTRATION' | 'ACTIVE' | 'COMPLETED';
   phases: TournamentPhase[];
   isAutoRules?: boolean;

@@ -4,7 +4,7 @@ import { useTournament, useTeams } from '../context/TournamentContext';
 import { addTeam, deleteTeam, updateTeam, updateTournament, setMatchesBulk, deleteTournament, type Team } from '../firebase/db';
 import { TeamCard } from '../components/TeamCard';
 import { PRESET_COLORS } from '../utils/colors';
-import { Loader2, Users, Play, Settings, UserPlus, ClipboardList, Clock, ChevronDown, ChevronUp, ArrowLeft, Share2 } from 'lucide-react';
+import { Loader2, Users, Play, Settings, UserPlus, ClipboardList, Clock, ChevronDown, ChevronUp, ArrowLeft, Share2, MapPin, Calendar } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useAuth } from '../context/AuthContext';
 import { generateDynamicTournament } from '../utils/tournamentGenerator';
@@ -191,7 +191,7 @@ export default function TournamentLobbyPage({ sport = 'volleyball' }: { sport?: 
             </h1>
           </div>
           <TournamentConfigForm
-            initialData={{ name: tournament.name, expectedTeams: tournament.expectedTeams, phases: tournament.phases, isAutoRules: tournament.isAutoRules }}
+            initialData={{ name: tournament.name, expectedTeams: tournament.expectedTeams, phases: tournament.phases, isAutoRules: tournament.isAutoRules, date: tournament.date, location: tournament.location }}
             onSubmit={handleUpdateRules}
             onCancel={() => setIsEditingRules(false)}
             submitLabel="Save Changes"
@@ -226,9 +226,25 @@ export default function TournamentLobbyPage({ sport = 'volleyball' }: { sport?: 
           <div className="flex items-center gap-3">
             <h2 className="text-2xl font-bold text-white">{tournament.name}</h2>
             <button 
-              onClick={() => {
-                navigator.clipboard.writeText(window.location.href);
-                alert('Tournament link copied to clipboard!');
+              onClick={async () => {
+                const shareText = `🏆 Join my upcoming tournament: ${tournament.name}!\n` +
+                  (tournament.location ? `📍 Location: ${tournament.location}\n` : '') +
+                  (tournament.date ? `🗓️ Date: ${tournament.date}\n\n` : '\n') +
+                  `Tap here to view the live board and standings:\n${window.location.href}`;
+                
+                if (navigator.share) {
+                  try {
+                    await navigator.share({
+                      title: tournament.name,
+                      text: shareText,
+                    });
+                    return;
+                  } catch (e) {
+                    // Fallback to clipboard
+                  }
+                }
+                navigator.clipboard.writeText(shareText);
+                alert('Tournament details copied to clipboard!');
               }}
               className="btn btn-ghost btn-sm p-2 text-slate-400 hover:text-white rounded-full bg-white/5 hover:bg-white/10 transition-colors"
               title="Share Tournament"
@@ -236,6 +252,22 @@ export default function TournamentLobbyPage({ sport = 'volleyball' }: { sport?: 
               <Share2 className="w-4 h-4" />
             </button>
           </div>
+          {(tournament.date || tournament.location) && (
+            <div className="flex items-center gap-4 mt-2 text-sm text-slate-400">
+              {tournament.date && (
+                <div className="flex items-center gap-1.5">
+                  <Calendar className="w-4 h-4 text-primary" />
+                  {tournament.date}
+                </div>
+              )}
+              {tournament.location && (
+                <div className="flex items-center gap-1.5">
+                  <MapPin className="w-4 h-4 text-secondary" />
+                  {tournament.location}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

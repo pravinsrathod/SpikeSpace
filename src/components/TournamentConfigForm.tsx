@@ -11,6 +11,8 @@ export interface TournamentConfigData {
   isAutoRules?: boolean;
   copyTeams?: boolean;
   oversPerInning?: number;
+  date?: string;
+  location?: string;
 }
 
 interface TournamentConfigFormProps {
@@ -25,6 +27,8 @@ interface TournamentConfigFormProps {
 export function TournamentConfigForm({ initialData, onSubmit, submitLabel, onCancel, allowCopyTeams, sport = 'volleyball' }: TournamentConfigFormProps) {
   const [step, setStep] = useState(1);
   const [name, setName] = useState(initialData?.name || '');
+  const [date, setDate] = useState(initialData?.date || '');
+  const [location, setLocation] = useState(initialData?.location || '');
   const [expectedTeams, setExpectedTeams] = useState(initialData?.expectedTeams || 8);
   const [phases, setPhases] = useState<TournamentPhase[]>(
     initialData?.phases && initialData.phases.length > 0
@@ -71,7 +75,7 @@ export function TournamentConfigForm({ initialData, onSubmit, submitLabel, onCan
 
     setLoading(true);
     try {
-      await onSubmit({ name, expectedTeams, phases: finalPhases, isAutoRules, copyTeams, oversPerInning });
+      await onSubmit({ name, expectedTeams, phases: finalPhases, isAutoRules, copyTeams, oversPerInning, date, location });
     } finally {
       setLoading(false);
     }
@@ -102,6 +106,28 @@ export function TournamentConfigForm({ initialData, onSubmit, submitLabel, onCan
                 placeholder="e.g. Summer Smash 2026"
                 autoFocus
               />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-400 mb-2">Start Date (Optional)</label>
+                <input
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className="input"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-400 mb-2">Location (Optional)</label>
+                <input
+                  type="text"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  className="input"
+                  placeholder="e.g. City Sports Hall"
+                />
+              </div>
             </div>
 
             <div>
